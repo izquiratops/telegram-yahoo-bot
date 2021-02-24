@@ -1,20 +1,24 @@
 import logging, telegram
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from scraper import Scraper
+from telegram.ext import Updater, CommandHandler
+from modules.scraper import Scraper
 
 def start(update, context):
-	context.bot.send_message(chat_id=update.effective_chat.id, text="Beep boop, soy izqui pero la vacuna contra el covid me ha convertido en un robot")
+	context.bot.send_message(chat_id=update.effective_chat.id, text='Beep boop')
 
-def echo(update, context):
-	symbol = update.message.text
-	result = scraper.getFromStock(symbol)
+def help_command(update, context):
+	message = '/stock *your symbol here*'
+	context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+
+def stock(update, context):
+	symbol: str = update.message.text.split()[-1]
+	result = scraper.getFromStock(symbol.lower())
 
 	if result is not None:
-		message = result.intradayPrice + ' (' + result.intradayChangePoint + ', ' + result.intradayChangePercent + ')'
+		message = f'{result}'
 	else:
-		message = 'Couldn\'t find the symbol'
+		message = 'Timeout or wrong symbol'
 
-	logger.info(str(update.effective_chat.full_name) + ' - ' + message)
+	logger.info(f'{update.effective_chat.full_name} - {message}')
 	context.bot.send_message(chat_id=update.effective_chat.id, text=message)
 
 if __name__ == '__main__':
@@ -24,20 +28,25 @@ if __name__ == '__main__':
 
 	# Command Handlers	
 	start_handler = CommandHandler('start', start)
-	echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
+	help_handler = CommandHandler('help', help_command)
+	stock_handler = CommandHandler('stock', stock)
 
 	# Init Dispatcher
 	updater = Updater(token, use_context=True)
 	dispatcher = updater.dispatcher
 	dispatcher.add_handler(start_handler)
-	dispatcher.add_handler(echo_handler)
+	dispatcher.add_handler(help_handler)
+	dispatcher.add_handler(stock_handler)
 
 	# Init Scraper
 	scraper = Scraper()
 
 	# Logging
-	logging.basicConfig(level=logging.DEBUG,
-					format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+	logging.basicConfig(
+		filename='log.txt',
+		filemode='a',
+		level=logging.INFO,
+		format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 	logger = logging.getLogger()
 	logger.setLevel(logging.INFO)
 
