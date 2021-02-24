@@ -11,6 +11,7 @@ def help_command(update, context):
 
 def stock(update, context):
 	symbol: str = update.message.text.split()[-1]
+	logger.info(symbol)
 	result = scraper.getFromStock(symbol.lower())
 
 	if result is not None:

@@ -6,7 +6,7 @@ class Scraper:
     def getFromStock(self, sym: str) -> Stock:
         targetPage = 'https://www.marketwatch.com/investing/stock/' + sym
         try:
-            targetURL = urlopen(targetPage, timeout=0.1)
+            targetURL = urlopen(targetPage, timeout=10)
         except:
             return None # Timeout
 
