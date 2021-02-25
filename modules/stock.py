@@ -1,5 +1,5 @@
 class Stock:
-	def __str__(self):
+	def __str__(self) -> str:
 		return  f"Price: {self.intradayPrice}$\n" \
 				f"Change Point: {self.intradayChangePoint}$ " \
 				f"({self.intradayChangePercent})"
