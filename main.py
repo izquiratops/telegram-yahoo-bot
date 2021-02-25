@@ -24,8 +24,9 @@ def stock(update, context):
 
 if __name__ == '__main__':
 	# Get Token
-	with open('token.txt', 'r') as f:
-		token = f.readline()
+	f = open('token.txt', 'r')
+	token = f.readline().replace("\n", "")
+	f.close()
 
 	# Command Handlers	
 	start_handler = CommandHandler('start', start)
