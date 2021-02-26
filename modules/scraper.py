@@ -8,7 +8,7 @@ class Scraper:
 		try:
 			targetURL = urlopen(targetPage, timeout=10)
 		except:
-			return 'Timeout'
+			raise AssertionError('Couldn\'t reach the website')
 
 		soup = BeautifulSoup(targetURL, 'html.parser')
 		try:
@@ -18,7 +18,7 @@ class Scraper:
 			intradayChangePoint   = intradayChange.find('span', class_='change--point--q')
 			intradayChangePercent = intradayChange.find('span', class_='change--percent--q')
 		except:
-			return 'Wrong symbol'
+			raise AssertionError('Couldn\'t find the symbol')
 
 		priceValue   = intradayPrice.find('bg-quote').text
 		pointValue   = intradayChangePoint.find('bg-quote').text

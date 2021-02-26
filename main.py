@@ -8,29 +8,31 @@ from telegram.ext import Updater, CommandHandler, CallbackContext, CallbackQuery
 from modules.scraper import Scraper
 from modules.utils import Utils
 
-def start(update: Update, context: CallbackContext) -> None:
+def startCommand(update: Update, context: CallbackContext) -> None:
 	update.message.reply_text('Beep boop')
 
 def helpCommand(update: Update, context: CallbackContext) -> None:
 	update.message.reply_text('/stock *your symbol here*')
 
-def stock(update: Update, context: CallbackContext) -> None:
+def stockCommand(update: Update, context: CallbackContext) -> None:
 	# Any comment older than 5 minutes ago will be ignored
 	if utils.timeDiff(update.message.date) > 5:
 		return
 
 	# Getting symbol and scrapping the web
-	request = update.message.text.split()
-	if len(request) != 2:
-		return
-	else:
-		message = scraper.getFromStock(request[1].replace('$','').lower())
+	try:
+		symbol = utils.getSymbol(update.message.text)
+		message = scraper.getFromStock(symbol)
+	except Exception as e:
+		# Report error
+		logger.error(f'{update.effective_chat.full_name} ({update.effective_chat.id})\n{e}')
+		update.message.reply_text(e.args[0], reply_to_message_id=update.message.message_id)
 
 	# Sending message
-	logger.info(f'{update.effective_chat.full_name} ({update.effective_chat.id}) -> {request}')
+	logger.info(f'{update.effective_chat.full_name} ({update.effective_chat.id}) -> {symbol}')
 	update.message.reply_text(message, reply_to_message_id=update.message.message_id)
 
-def favorites(update: Update, context: CallbackContext) -> None:
+def favsCommand(update: Update, context: CallbackContext) -> None:
 	keyboard = [
 		[
 			InlineKeyboardButton('Baba', callback_data='baba'),
@@ -51,7 +53,13 @@ def stockCallback(update: Update, context: CallbackContext) -> None:
 	query.answer()
 
 	# Getting symbol and scrapping the web
-	message = scraper.getFromStock(query.data)
+	try:
+		message = scraper.getFromStock(query.data)
+	except Exception as e:
+		# Report error
+		logger.error(f'{update.effective_chat.full_name} ({update.effective_chat.id})\n{e}')
+		update.message.reply_text(e.args[0], reply_to_message_id=update.message.message_id)
+
 	query.edit_message_text(f'Stock: {query.data.upper()}\n{message}')
 
 def main() -> None:
@@ -64,16 +72,16 @@ def main() -> None:
 	dispatcher = updater.dispatcher
 
 	# Start
-	startHandler = CommandHandler('start', start)
+	startHandler = CommandHandler('start', startCommand)
 	dispatcher.add_handler(startHandler)
 	# Help
 	helpHandler = CommandHandler('help', helpCommand)
 	dispatcher.add_handler(helpHandler)
 	# Stock
-	stockHandler = CommandHandler('stock', stock)
+	stockHandler = CommandHandler('stock', stockCommand)
 	dispatcher.add_handler(stockHandler)
 	# Favs
-	favsHandler = CommandHandler('favs', favorites)
+	favsHandler = CommandHandler('favs', favsCommand)
 	dispatcher.add_handler(favsHandler)
 	# Fav. Stock Callback
 	dispatcher.add_handler(CallbackQueryHandler(stockCallback))
