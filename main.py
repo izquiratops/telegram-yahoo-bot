@@ -3,17 +3,16 @@
 import logging, telegram
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
-from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, CallbackContext, CallbackQueryHandler
 from modules.scraper import Scraper
 from modules.utils import Utils
 
 def start(update: Update, context: CallbackContext) -> None:
-	context.bot.send_message(chat_id=update.effective_chat.id, text='Beep boop')
+	update.message.reply_text('Beep boop')
 
-def help_command(update: Update, context: CallbackContext) -> None:
-	message = '/stock *your symbol here*'
-	context.bot.send_message(chat_id=update.effective_chat.id, text=message)
+def helpCommand(update: Update, context: CallbackContext) -> None:
+	update.message.reply_text('/stock *your symbol here*')
 
 def stock(update: Update, context: CallbackContext) -> None:
 	# Any comment older than 5 minutes ago will be ignored
@@ -29,10 +28,31 @@ def stock(update: Update, context: CallbackContext) -> None:
 
 	# Sending message
 	logger.info(f'{update.effective_chat.full_name} ({update.effective_chat.id}) -> {request}')
-	context.bot.send_message(
-		chat_id=update.effective_chat.id, 
-		text=message,
-		reply_to_message_id=update.message.message_id)
+	update.message.reply_text(message, reply_to_message_id=update.message.message_id)
+
+def favorites(update: Update, context: CallbackContext) -> None:
+	keyboard = [
+		[
+			InlineKeyboardButton('Baba', callback_data='baba'),
+			InlineKeyboardButton('Gamestock', callback_data='gme')
+		],
+		[
+			InlineKeyboardButton('Norwegian', callback_data='nclh')
+		]
+	]
+
+	replyMarkup = InlineKeyboardMarkup(keyboard)
+	update.message.reply_text('Select stock:', reply_markup=replyMarkup)
+
+def stockCallback(update: Update, context: CallbackContext) -> None:
+	# CallbackQueries need to be answered, even if no notification to the user is needed
+	# Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
+	query = update.callback_query
+	query.answer()
+
+	# Getting symbol and scrapping the web
+	message = scraper.getFromStock(query.data)
+	query.edit_message_text(f'Stock: {query.data.upper()}\n{message}')
 
 def main() -> None:
 	# Init Dispatcher
@@ -44,14 +64,19 @@ def main() -> None:
 	dispatcher = updater.dispatcher
 
 	# Start
-	start_handler = CommandHandler('start', start)
-	dispatcher.add_handler(start_handler)
+	startHandler = CommandHandler('start', start)
+	dispatcher.add_handler(startHandler)
 	# Help
-	help_handler = CommandHandler('help', help_command)
-	dispatcher.add_handler(help_handler)
+	helpHandler = CommandHandler('help', helpCommand)
+	dispatcher.add_handler(helpHandler)
 	# Stock
-	stock_handler = CommandHandler('stock', stock)
-	dispatcher.add_handler(stock_handler)
+	stockHandler = CommandHandler('stock', stock)
+	dispatcher.add_handler(stockHandler)
+	# Favs
+	favsHandler = CommandHandler('favs', favorites)
+	dispatcher.add_handler(favsHandler)
+	# Fav. Stock Callback
+	dispatcher.add_handler(CallbackQueryHandler(stockCallback))
 
 	# Start bot
 	updater.start_polling()
