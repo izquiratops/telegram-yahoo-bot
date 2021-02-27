@@ -1,8 +1,6 @@
 import logging
 from logging.handlers import RotatingFileHandler
-
-# Project modules
-from bort import Bort
+from modules.bort import Bort
 
 def setupLoggerHandler() -> RotatingFileHandler:
 	# https://stackoverflow.com/questions/24505145/how-to-limit-log-file-size-in-python
