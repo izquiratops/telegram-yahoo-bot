@@ -1,5 +1,5 @@
-token.txt
-log.txt
-__pycache__
+*.txt
+*.db
 *.pyc
+__pycache__
 .vscode/*

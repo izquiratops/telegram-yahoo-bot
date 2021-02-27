@@ -1,30 +1,8 @@
-#!/usr/bin/python3 -u
-
 import logging
-from telegram.ext import Updater
 from logging.handlers import RotatingFileHandler
 
 # Project modules
-from methods import Commands, Callbacks
-
-def main() -> None:
-	# Logging
-	logger = logging.getLogger('root')
-	logger.setLevel(logging.INFO)
-	logger.addHandler(setupLoggerHandler())
-
-	# Init Dispatcher
-	with open('token.txt', 'r') as f:
-		token = f.readline().replace("\n", "")
-		updater = Updater(token, use_context=True)
-
-	# Setup Telegram Commands and Callbacks
-	Commands(logger, updater.dispatcher)
-	Callbacks(logger, updater.dispatcher)
-
-	# Start bot
-	updater.start_polling()
-	updater.idle()
+from bort import Bort
 
 def setupLoggerHandler() -> RotatingFileHandler:
 	# https://stackoverflow.com/questions/24505145/how-to-limit-log-file-size-in-python
@@ -41,6 +19,19 @@ def setupLoggerHandler() -> RotatingFileHandler:
 	logHandler.setLevel(logging.INFO)
 
 	return logHandler
+
+def main() -> None:
+	# Logging
+	logger = logging.getLogger('root')
+	logger.setLevel(logging.INFO)
+	logger.addHandler(setupLoggerHandler())
+
+	# Setup Telegram Bot logic
+	bort = Bort(logger)
+
+	# Start bot
+	bort.updater.start_polling()
+	bort.updater.idle()
 
 if __name__ == '__main__':
 	main()

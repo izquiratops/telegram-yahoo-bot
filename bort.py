@@ -6,30 +6,36 @@ from telegram.ext import Dispatcher, Updater, CallbackContext, CommandHandler, C
 from modules.scraper import Scraper
 from modules.utils import Utils
 
-class Commands:
-	"""A module-level docstring
+SCRAPER = Scraper()
+UTILS = Utils()
+
+class Bort:
+	'''A module-level docstring
 
 	Notice the comment above the docstring specifying the encoding.
 	Docstrings do appear in the bytecode, so you can access this through
 	the ``__doc__`` attribute. This is also what you'll see if you call
 	help() on a module or any other Python object.
-	"""
+	'''
 
 	def start(self, update: Update, context: CallbackContext) -> None:
-		update.message.reply_text('Beep boop')
+		update.message.reply_text(
+			'<i>You can’t beat the market but you can beat your meat</i>\n\n'
+			'- Warren Buffet probably',
+			parse_mode='HTML')
 
 	def helper(self, update: Update, context: CallbackContext) -> None:
 		update.message.reply_text('/stock *your symbol here*')
 
-	def stock(self, update: Update, context: CallbackContext) -> None:
+	def stockCommand(self, update: Update, context: CallbackContext) -> None:
 		# Any comment older than 5 minutes ago will be ignored
-		if self.utils.timeDiff(update.message.date) > 5:
+		if UTILS.timeDiff(update.message.date) > 5:
 			return
 
 		# Getting symbol and scrapping the web
 		try:
-			symbol = self.utils.getSymbol(update.message.text)
-			message = self.scraper.getFromStock(symbol)
+			symbol = UTILS.getSymbol(update.message.text)
+			message = SCRAPER.getFromStock(symbol)
 		except Exception as e:
 			# Report error
 			self.logger.error(f'{update.effective_chat.full_name} ({update.effective_chat.id})\n{e}')
@@ -56,32 +62,7 @@ class Commands:
 		replyMarkup = InlineKeyboardMarkup(keyboard)
 		update.message.reply_text('Select stock:', reply_markup=replyMarkup)
 
-	def __init__(self, logger: Logger, dispatcher: Dispatcher):
-		# Logger
-		self.logger = logger
-
-		# Project Modules
-		self.scraper = Scraper()
-		self.utils = Utils()
-
-		# Handlers
-		dispatcher.add_handler(CommandHandler('start', 	self.start))
-		dispatcher.add_handler(CommandHandler('help', 	self.helper))
-		dispatcher.add_handler(CommandHandler('stock', 	self.stock))
-		dispatcher.add_handler(CommandHandler('addFav', self.addFavorite))
-		dispatcher.add_handler(CommandHandler('favs', 	self.favorites))
-
-
-class Callbacks:
-	"""A module-level docstring
-
-	Notice the comment above the docstring specifying the encoding.
-	Docstrings do appear in the bytecode, so you can access this through
-	the ``__doc__`` attribute. This is also what you'll see if you call
-	help() on a module or any other Python object.
-	"""
-
-	def stock(self, update: Update, context: CallbackContext) -> None:
+	def stockCallback(self, update: Update, context: CallbackContext) -> None:
 		# CallbackQueries need to be answered, even if no notification to the user is needed
 		# Some clients may have trouble otherwise. See https://core.telegram.org/bots/api#callbackquery
 		query = update.callback_query
@@ -89,7 +70,7 @@ class Callbacks:
 
 		# Getting symbol and scrapping the web
 		try:
-			message = self.scraper.getFromStock(query.data)
+			message = SCRAPER.getFromStock(query.data)
 		except Exception as e:
 			# Report error
 			self.logger.error(f'{update.effective_chat.full_name} ({update.effective_chat.id})\n{e}')
@@ -97,14 +78,20 @@ class Callbacks:
 
 		query.edit_message_text(f'Stock: {query.data.upper()}\n{message}')
 
-	def __init__(self, logger: Logger, dispatcher: Dispatcher):
-		# Logger
-		self.logger = logger
+	def __init__(self, logger: Logger):
+		with open('token.txt', 'r') as f:
+			token = f.readline().replace('\n', '')
+		assert token is not None, 'Couldn\'t read the token'
 
-		# Project Modules
-		self.scraper = Scraper()
-		self.utils = Utils()
+		# Class vars
+		self.logger = logger
+		self.updater = Updater(token, use_context=True)
 
 		# Handlers
-		dispatcher.add_handler(CallbackQueryHandler(self.stock))
-
+		dispatcher = self.updater.dispatcher
+		dispatcher.add_handler(CommandHandler('start', 	self.start))
+		dispatcher.add_handler(CommandHandler('help', 	self.helper))
+		dispatcher.add_handler(CommandHandler('stock', 	self.stockCommand))
+		dispatcher.add_handler(CommandHandler('addFav', self.addFavorite))
+		dispatcher.add_handler(CommandHandler('favs', 	self.favorites))
+		dispatcher.add_handler(CallbackQueryHandler(self.stockCallback))
