@@ -1,10 +1,22 @@
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
-from modules.stock import Stock
+
+class Stock:
+	def __str__(self) -> str:
+		return  f"{self.symbol.upper()}\n" \
+				f"Price: {self.intradayPrice}$\n" \
+				f"Change Point: {self.intradayChangePoint}$ " \
+				f"({self.intradayChangePercent})"
+
+	def __init__(self, symbol, intradayPrice, intradayChangePoint, intradayChangePercent):
+		self.symbol = symbol
+		self.intradayPrice         = intradayPrice
+		self.intradayChangePoint   = intradayChangePoint
+		self.intradayChangePercent = intradayChangePercent
 
 class Scraper:
-	def getFromStock(self, sym: str) -> str:
-		targetPage = 'https://www.marketwatch.com/investing/stock/' + sym
+	def getFromStock(self, symbol: str) -> str:
+		targetPage = 'https://www.marketwatch.com/investing/stock/' + symbol
 		try:
 			targetURL = urlopen(targetPage, timeout=10)
 		except:
@@ -24,7 +36,7 @@ class Scraper:
 		pointValue   = intradayChangePoint.find('bg-quote').text
 		percentValue = intradayChangePercent.find('bg-quote').text
 
-		stock = Stock(priceValue, pointValue, percentValue)
+		stock = Stock(symbol, priceValue, pointValue, percentValue)
 		return f'{stock}'
 
 	def __init__(self):
