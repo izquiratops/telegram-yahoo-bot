@@ -39,6 +39,9 @@ class Bort:
 
 	# Stock uses Conversational Replies
 	def stock(self, update: Update, context: CallbackContext) -> None:
+		if not update.message:
+			return
+
 		user = update.message.from_user
 		symbols = re.findall('\\/[^\\s]*', update.message.text)
 		unique = list(dict.fromkeys(symbols))
@@ -48,13 +51,17 @@ class Bort:
 		for symbol in unique:
 			try:
 				message = self.scraper.getFromStock(symbol[1:])
-				response += f'{message}\n\n'
+				response += f'{message}\n'
 				self.logger.info(f'{user.full_name} ({user.id}) -> {symbol}')
 			except Exception as e:
 				self.logger.error(f'{user.full_name} ({user.id}) -> {symbol}: {e}')
 
 		# Response
-		update.message.reply_text(response, reply_to_message_id=update.message.message_id)
+		if response:
+			update.message.reply_text(response, reply_to_message_id=update.message.message_id)
+
+	def tail(self, update: Update, context: CallbackContext) -> None:
+		pass
 
 	def __init__(self, logger: Logger):
 		with open('token.txt', 'r') as f:
@@ -74,5 +81,6 @@ class Bort:
 
 		dispatcher.add_handler(CommandHandler('start', self.start))
 		dispatcher.add_handler(CommandHandler('help', self.helper))
+		dispatcher.add_handler(CommandHandler('tail', self.tail))
 		dispatcher.add_handler(MessageHandler(Filters.regex('\\/[^\\s]*'), self.stock))
 

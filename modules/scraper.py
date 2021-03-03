@@ -1,12 +1,15 @@
+import math
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
 class Stock:
 	def __str__(self) -> str:
-		return  f"{self.symbol.upper()}\n" \
+		percent = float(self.intradayChangePercent[:-1])
+		rockets = '🚀' * math.floor(percent / 5)
+		return  f"{self.symbol.upper()}\t{rockets}\n" \
 				f"Price: {self.intradayPrice}$\n" \
 				f"Change Point: {self.intradayChangePoint}$ " \
-				f"({self.intradayChangePercent})"
+				f"({self.intradayChangePercent})\n"
 
 	def __init__(self, symbol, intradayPrice, intradayChangePoint, intradayChangePercent):
 		self.symbol = symbol
