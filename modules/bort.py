@@ -22,7 +22,6 @@ class Bort:
 	help() on a module or any other Python object.
 	'''
 
-	# /start and /help uses Common Handlers
 	def start(self, update: Update, context: CallbackContext) -> None:
 		update.message.reply_text(
 			'<i>You can’t beat the market but you can beat your meat</i>\n\n'
@@ -37,7 +36,6 @@ class Bort:
 			parse_mode='HTML'
 		)
 
-	# Stock uses Conversational Replies
 	def stock(self, update: Update, context: CallbackContext) -> None:
 		if not update.message:
 			return
