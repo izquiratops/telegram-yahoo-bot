@@ -1,4 +1,5 @@
 from logging import Logger
+from collections import deque
 from telegram import Update
 from telegram.ext import (
 	Updater,
@@ -58,7 +59,10 @@ class Bort:
 			update.message.reply_text(response, reply_to_message_id=update.message.message_id)
 
 	def tail(self, update: Update, context: CallbackContext) -> None:
-		pass
+		with open('log.txt') as fin:
+			tail = deque(fin, 10)
+		update.message.reply_text(''.join(tail))
+
 
 	def __init__(self, logger: Logger):
 		with open('token.txt', 'r') as f:

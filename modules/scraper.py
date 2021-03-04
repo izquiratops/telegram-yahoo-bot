@@ -1,21 +1,22 @@
-import math
+from math import floor
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
 class Stock:
 	def __str__(self) -> str:
-		percent = float(self.intradayChangePercent[:-1])
-		rockets = '🚀' * math.floor(percent / 5)
-		return  f"{self.symbol.upper()}\t{rockets}\n" \
+		return  f"{self.companyName} [{self.symbol.upper()}]" \
+				f"\t{self.rockets}\n" \
 				f"Price: {self.intradayPrice}$\n" \
 				f"Change Point: {self.intradayChangePoint}$ " \
-				f"({self.intradayChangePercent})\n"
+				f"({self.intradayChangePercent}%)\n"
 
-	def __init__(self, symbol, intradayPrice, intradayChangePoint, intradayChangePercent):
-		self.symbol = symbol
-		self.intradayPrice         = intradayPrice
-		self.intradayChangePoint   = intradayChangePoint
-		self.intradayChangePercent = intradayChangePercent
+	def __init__(self, symbol, companyName, intradayPrice, intradayChangePoint, intradayChangePercent):
+		self.symbol: str 				= symbol
+		self.companyName: str			= companyName
+		self.intradayPrice: str			= intradayPrice
+		self.intradayChangePoint: str	= intradayChangePoint
+		self.intradayChangePercent: str	= intradayChangePercent
+		self.rockets: str 				= '🚀' * floor(float(intradayChangePercent) / 5)
 
 class Scraper:
 	def getFromStock(self, symbol: str) -> str:
@@ -27,19 +28,21 @@ class Scraper:
 
 		soup = BeautifulSoup(targetURL, 'html.parser')
 		try:
-			parentElement         = soup.find('div', class_='intraday__data')
-			intradayPrice         = parentElement.find('h3', class_='intraday__price')
-			intradayChange        = parentElement.find('bg-quote', class_='intraday__change')
-			intradayChangePoint   = intradayChange.find('span', class_='change--point--q')
-			intradayChangePercent = intradayChange.find('span', class_='change--percent--q')
+			companyName				= soup.find('h1', class_='company__name')
+			parentElement			= soup.find('div', class_='intraday__data')
+			intradayPrice			= parentElement.find('h3', class_='intraday__price')
+			intradayChange			= parentElement.find('bg-quote', class_='intraday__change')
+			intradayChangePoint		= intradayChange.find('span', class_='change--point--q')
+			intradayChangePercent	= intradayChange.find('span', class_='change--percent--q')
 		except:
 			raise AssertionError('Couldn\'t find the symbol')
 
-		priceValue   = intradayPrice.find('bg-quote').text
-		pointValue   = intradayChangePoint.find('bg-quote').text
-		percentValue = intradayChangePercent.find('bg-quote').text
+		nameValue		= companyName.text
+		priceValue		= intradayPrice.find('bg-quote').text
+		pointValue		= intradayChangePoint.find('bg-quote').text
+		percentValue	= intradayChangePercent.find('bg-quote').text[:-1]
 
-		stock = Stock(symbol, priceValue, pointValue, percentValue)
+		stock = Stock(symbol, nameValue, priceValue, pointValue, percentValue)
 		return f'{stock}'
 
 	def __init__(self):
