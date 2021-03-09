@@ -2,6 +2,8 @@ from math import floor
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 
+BASEURL = 'https://www.marketwatch.com/investing/'
+
 class Stock:
 	def __str__(self) -> str:
 		return  f"{self.companyName} [{self.symbol.upper()}]" \
@@ -20,11 +22,23 @@ class Stock:
 
 class Scraper:
 	def getFromStock(self, symbol: str) -> str:
-		targetPage = 'https://www.marketwatch.com/investing/stock/' + symbol
+		# Retrieve symbol from cache
 		try:
-			targetURL = urlopen(targetPage, timeout=10)
+			kind = self.cache[symbol]
+			targetURL = urlopen(BASEURL + kind + symbol, timeout=5)
+
+		# Not found block
 		except:
-			raise AssertionError('Couldn\'t reach the website')
+			# Looking for Stocks, then Funds
+			for kind in ['stock/', 'fund/']:
+				try:
+					targetURL = urlopen(BASEURL + kind + symbol, timeout=5)
+					self.cache[symbol] = kind
+					break
+				except:
+					continue
+
+			assert targetURL is not None, "Couldn't reach the website"
 
 		soup = BeautifulSoup(targetURL, 'html.parser')
 		try:
@@ -46,4 +60,5 @@ class Scraper:
 		return f'{stock}'
 
 	def __init__(self):
+		self.cache = dict()
 		pass

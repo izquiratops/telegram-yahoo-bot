@@ -1,3 +1,4 @@
+import re
 from logging import Logger
 from collections import deque
 from telegram import Update
@@ -9,7 +10,6 @@ from telegram.ext import (
 	CommandHandler
 )
 
-import re
 from modules.scraper import Scraper
 from modules.utils import Utils
 
@@ -32,12 +32,13 @@ class Bort:
 		update.message.reply_text(
 			"<b>/start</b> - Greetings from Bort\n"
 			"<b>/help</b> - You're currently here\n"
-			"<b>/<i>insert_symbol_here</i></b> - Ask for the price of a stock\n",
+			"<b>... $<i>insert_symbol_here</i></b> ... - Ask for the price of a stock\n",
 			parse_mode='HTML'
 		)
 
 	def stock(self, update: Update, context: CallbackContext) -> None:
-		if not update.message:
+		# Ignore message edits AND requests older than 5 mins
+		if not update.message and utils.timeDiff(update.message.date) > 5:
 			return
 
 		user = update.message.from_user
