@@ -41,7 +41,7 @@ class Bort:
 			return
 
 		user = update.message.from_user
-		symbols = re.findall('[*$][^\\s]*', update.message.text)
+		symbols = re.findall('[$][^\\s]*', update.message.text)
 		unique = list(dict.fromkeys(symbols))
 
 		# Requesting data
@@ -82,5 +82,5 @@ class Bort:
 		dispatcher.add_handler(CommandHandler('start', self.start))
 		dispatcher.add_handler(CommandHandler('help', self.helper))
 		dispatcher.add_handler(CommandHandler('tail', self.tail))
-		dispatcher.add_handler(MessageHandler(Filters.regex('[*$][^\\s]*'), self.stock))
+		dispatcher.add_handler(MessageHandler(Filters.regex('[$][^\\s]*'), self.stock))
 
