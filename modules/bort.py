@@ -1,6 +1,11 @@
-import re
-from logging import Logger
+import re, json
+# API Yahoo Finance update
+from math import floor
+from datetime import datetime
 from collections import deque
+from logging import Logger
+from urllib.request import urlopen
+
 from telegram import Update
 from telegram.ext import (
 	Updater,
@@ -10,8 +15,55 @@ from telegram.ext import (
 	CommandHandler
 )
 
-from modules.scraper import Scraper
-from modules.utils import Utils
+
+BASEURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
+
+class Stock:
+	def __str__(self) -> str:
+		times = floor(float(self.regularMarketChangePercent) / 5)
+		if (times > 0):
+			rockets: str = '🚀' * times
+		else:
+			rockets: str = '📉' * times
+		message: str = f"🔸 {self.displayName} ${self.symbol.upper()} {rockets}\n"
+
+		# Regular Market 
+		message +=	f"<b>Regular Market</b> " \
+					f"{self.regularMarketPrice}$ " \
+					f"({self.regularMarketChange}$, {self.regularMarketChangePercent}%)\n"
+
+		# Post Market
+		try:
+			message +=	f"<b>Post Market</b> " \
+						f"{self.postMarketPrice}$ " \
+						f"({self.postMarketChange}$, {self.postMarketChangePercent}%)\n"
+		except:
+			pass
+
+		return message
+
+	def __init__(self, obj) -> None:
+		# Symbol
+		self.symbol = obj['symbol']
+
+		# Name
+		if 'displayName' in obj:
+			self.displayName = obj['displayName']
+		else:
+			self.displayName = obj['longName']
+
+		# Regular Market
+		self.regularMarketPrice			= format(round(obj['regularMarketPrice'], 2))
+		self.regularMarketChange		= format(round(obj['regularMarketChange'], 2))
+		self.regularMarketChangePercent	= format(round(obj['regularMarketChangePercent'], 2))
+
+		# Post Market
+		if 'postMarketPrice' in obj:
+			self.postMarketPrice		 = format(round(obj['postMarketPrice'], 2))
+		if 'postMarketChange' in obj:
+			self.postMarketChange		 = format(round(obj['postMarketChange'], 2))
+		if 'postMarketChangePercent' in obj:
+			self.postMarketChangePercent = format(round(obj['postMarketChangePercent'], 2))
 
 class Bort:
 	'''A module-level docstring
@@ -21,6 +73,11 @@ class Bort:
 	the ``__doc__`` attribute. This is also what you'll see if you call
 	help() on a module or any other Python object.
 	'''
+
+	def timeDiff(self, inputTime: datetime) -> int:
+		date = inputTime.replace(tzinfo=None)
+		now = datetime.utcnow()
+		return (now - date).total_seconds() / 60
 
 	def start(self, update: Update, context: CallbackContext) -> None:
 		update.message.reply_text(
@@ -38,32 +95,44 @@ class Bort:
 
 	def stock(self, update: Update, context: CallbackContext) -> None:
 		# Ignore message edits AND requests older than 5 mins
-		if not update.message and utils.timeDiff(update.message.date) > 5:
+		if not update.message and self.timeDiff(update.message.date) > 5:
 			return
 
-		user = update.message.from_user
+		# Ignore message if has no symbols on it
 		symbols = re.findall('[$][^\\s]*', update.message.text)
-		unique = list(dict.fromkeys(symbols))
+		if len(symbols) == 0:
+			return
 
-		# Requesting data
-		response = ""
-		for symbol in unique:
-			try:
-				message = self.scraper.getFromStock(symbol[1:])
-				response += f'{message}\n'
-				self.logger.info(f'{user.full_name} ({user.id}) -> {symbol}')
-			except Exception as e:
-				self.logger.error(f'{user.full_name} ({user.id}) -> {symbol}: {e}')
+		# Get User for log porposes
+		user = update.message.from_user
+		# List of unique symbols
+		uniqueSymbols = list(dict.fromkeys(symbols))
+		uniqueSymbols = [x[1:] for x in uniqueSymbols] # Get rid of $
+		uniqueSymbols = ','.join(uniqueSymbols)
 
-		# Response
+		# Yahoo Finance Request
+		try:
+			with urlopen(BASEURL + uniqueSymbols) as response:
+				read = response.read()
+				read = json.loads(read)
+		except:
+			self.logger.error(f'{user.full_name} - {update.message.from_user.id} - Symbols: {uniqueSymbols}')
+
+		# Write bot response
+		response: str = ''
+		for element in read['quoteResponse']['result']:
+			stock = Stock(element)
+			response += f'{stock}\n'
+			self.logger.info(f'{user.full_name} - {update.message.from_user.id} - {stock.symbol}')
+
 		if response:
-			update.message.reply_text(response, reply_to_message_id=update.message.message_id)
+			update.message.reply_text(response, parse_mode='HTML', reply_to_message_id=update.message.message_id)
 
 	def tail(self, update: Update, context: CallbackContext) -> None:
 		with open('log.txt') as fin:
 			tail = deque(fin, 10)
-		update.message.reply_text(''.join(tail))
-
+		for line in tail:
+			update.message.reply_text(line)
 
 	def __init__(self, logger: Logger):
 		with open('token.txt', 'r') as f:
@@ -73,15 +142,10 @@ class Bort:
 		self.logger = logger
 		self.updater = Updater(token, use_context=True)
 
-		# Project Modules
-		self.scraper = Scraper()
-		self.utils = Utils()
-
 		# Handlers
 		dispatcher = self.updater.dispatcher
-
 		dispatcher.add_handler(CommandHandler('start', self.start))
 		dispatcher.add_handler(CommandHandler('help', self.helper))
 		dispatcher.add_handler(CommandHandler('tail', self.tail))
-		dispatcher.add_handler(MessageHandler(Filters.regex('[$][^\\s]*'), self.stock))
+		dispatcher.add_handler(MessageHandler(Filters.text, self.stock))
 

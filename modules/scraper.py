@@ -4,24 +4,12 @@ from bs4 import BeautifulSoup
 
 BASEURL = 'https://www.marketwatch.com/investing/'
 
-class Stock:
-	def __str__(self) -> str:
-		return  f"{self.companyName} [{self.symbol.upper()}]" \
-				f"\t{self.rockets}\n" \
-				f"Price: {self.intradayPrice}$\n" \
-				f"Change Point: {self.intradayChangePoint}$ " \
-				f"({self.intradayChangePercent}%)\n"
-
-	def __init__(self, symbol, companyName, intradayPrice, intradayChangePoint, intradayChangePercent):
-		self.symbol: str 				= symbol
-		self.companyName: str			= companyName
-		self.intradayPrice: str			= intradayPrice
-		self.intradayChangePoint: str	= intradayChangePoint
-		self.intradayChangePercent: str	= intradayChangePercent
-		self.rockets: str 				= '🚀' * floor(float(intradayChangePercent) / 5)
-
 class Scraper:
-	def getFromStock(self, symbol: str) -> str:
+	"""
+	Marketwatch web scraper.
+	"""
+
+	def legacyGetStock(self, symbol: str) -> str:
 		# Retrieve symbol from cache
 		try:
 			kind = self.cache[symbol]

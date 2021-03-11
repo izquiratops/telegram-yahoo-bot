@@ -3,8 +3,7 @@ from logging.handlers import RotatingFileHandler
 from modules.bort import Bort
 
 def setupLoggerHandler() -> RotatingFileHandler:
-	# https://stackoverflow.com/questions/24505145/how-to-limit-log-file-size-in-python
-	logFormatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+	logFormatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 	logFile = 'log.txt'
 
 	logHandler = RotatingFileHandler(logFile,
