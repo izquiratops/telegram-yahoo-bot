@@ -19,24 +19,37 @@ from telegram.ext import (
 BASEURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
 
 class Stock:
-	def __str__(self) -> str:
-		times = floor(float(self.regularMarketChangePercent) / 5)
+	def getRockets(self, percent: str) -> str:
+		times = floor(float(percent) / 5)
 		if (times > 0):
-			rockets: str = '🚀' * times
+			return '🚀' * times
 		else:
-			rockets: str = '📉' * times
-		message: str = f"🔸 {self.displayName} ${self.symbol.upper()} {rockets}\n"
+			return '📉' * -times
+
+	def __str__(self) -> str:
+		message: str = f"🔸 {self.displayName} ${self.symbol.upper()}\n"
+
+		# Pre Market
+		try:
+			rockets = self.getRockets(self.preMarket['ChangePercent'])
+			message +=	f"<b>Pre Market</b> {rockets}\n" \
+						f"{self.preMarket['Price']}$ " \
+						f"({self.preMarket['Change']}$, {self.preMarket['ChangePercent']}%)\n"
+		except:
+			pass
 
 		# Regular Market 
-		message +=	f"<b>Regular Market</b> " \
-					f"{self.regularMarketPrice}$ " \
-					f"({self.regularMarketChange}$, {self.regularMarketChangePercent}%)\n"
+		rockets = self.getRockets(self.regularMarket['ChangePercent'])
+		message +=	f"<b>Regular Market</b> {rockets}\n" \
+					f"{self.regularMarket['Price']}$ " \
+					f"({self.regularMarket['Change']}$, {self.regularMarket['ChangePercent']}%)\n"
 
-		# Post Market
+		# After hours
 		try:
-			message +=	f"<b>Post Market</b> " \
-						f"{self.postMarketPrice}$ " \
-						f"({self.postMarketChange}$, {self.postMarketChangePercent}%)\n"
+			rockets = self.getRockets(self.postMarket['ChangePercent'])
+			message +=	f"<b>After Hours</b> {rockets}\n" \
+						f"{self.postMarket['Price']}$ " \
+						f"({self.postMarket['Change']}$, {self.postMarket['ChangePercent']}%)\n"
 		except:
 			pass
 
@@ -46,24 +59,36 @@ class Stock:
 		# Symbol
 		self.symbol = obj['symbol']
 
-		# Name
+		# Stock / Fund name
 		if 'displayName' in obj:
 			self.displayName = obj['displayName']
-		else:
+		elif 'longName' in obj:
 			self.displayName = obj['longName']
+		else:
+			self.displayName = obj['shortName']
+
+		marketTempalte = ['Price','Change','ChangePercent']
 
 		# Regular Market
-		self.regularMarketPrice			= format(round(obj['regularMarketPrice'], 2))
-		self.regularMarketChange		= format(round(obj['regularMarketChange'], 2))
-		self.regularMarketChangePercent	= format(round(obj['regularMarketChangePercent'], 2))
+		regularMarketKeys = ['regularMarketPrice','regularMarketChange','regularMarketChangePercent']
+		if obj.keys() >= set(regularMarketKeys):
+			self.regularMarket = {}
+			for prop, key in zip(marketTempalte, regularMarketKeys):
+				self.regularMarket[prop] = format(round(obj[key], 2))
 
-		# Post Market
-		if 'postMarketPrice' in obj:
-			self.postMarketPrice		 = format(round(obj['postMarketPrice'], 2))
-		if 'postMarketChange' in obj:
-			self.postMarketChange		 = format(round(obj['postMarketChange'], 2))
-		if 'postMarketChangePercent' in obj:
-			self.postMarketChangePercent = format(round(obj['postMarketChangePercent'], 2))
+		# After Hours
+		postMarketKeys = ['postMarketPrice','postMarketChange','postMarketChangePercent']
+		if obj.keys() >= set(postMarketKeys):
+			self.postMarket = {}
+			for prop, key in zip(marketTempalte, postMarketKeys):
+				self.regularMarket[prop] = format(round(obj[key], 2))
+
+		# Pre Market
+		preMarketKeys = ['preMarketPrice','preMarketChange','preMarketChangePercent']
+		if obj.keys() >= set(preMarketKeys):
+			self.preMarket = {}
+			for prop, key in zip(marketTempalte, preMarketKeys):
+				self.regularMarket[prop] = format(round(obj[key], 2))
 
 class Bort:
 	'''A module-level docstring
@@ -112,18 +137,18 @@ class Bort:
 
 		# Yahoo Finance Request
 		try:
-			with urlopen(BASEURL + uniqueSymbols) as response:
+			with urlopen(BASEURL + uniqueSymbols, timeout=10) as response:
 				read = response.read()
 				read = json.loads(read)
 		except:
-			self.logger.error(f'{user.full_name} - {update.message.from_user.id} - Symbols: {uniqueSymbols}')
+			self.logger.error(f'{user.full_name} [{update.message.from_user.id}]: {uniqueSymbols}')
 
 		# Write bot response
 		response: str = ''
 		for element in read['quoteResponse']['result']:
 			stock = Stock(element)
 			response += f'{stock}\n'
-			self.logger.info(f'{user.full_name} - {update.message.from_user.id} - {stock.symbol}')
+			self.logger.info(f'{user.full_name} [{update.message.from_user.id}]: {stock.symbol}')
 
 		if response:
 			update.message.reply_text(response, parse_mode='HTML', reply_to_message_id=update.message.message_id)
