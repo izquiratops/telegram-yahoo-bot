@@ -81,14 +81,14 @@ class Stock:
 		if obj.keys() >= set(postMarketKeys):
 			self.postMarket = {}
 			for prop, key in zip(marketTempalte, postMarketKeys):
-				self.regularMarket[prop] = format(round(obj[key], 2))
+				self.postMarket[prop] = format(round(obj[key], 2))
 
 		# Pre Market
 		preMarketKeys = ['preMarketPrice','preMarketChange','preMarketChangePercent']
 		if obj.keys() >= set(preMarketKeys):
 			self.preMarket = {}
 			for prop, key in zip(marketTempalte, preMarketKeys):
-				self.regularMarket[prop] = format(round(obj[key], 2))
+				self.preMarket[prop] = format(round(obj[key], 2))
 
 class Bort:
 	'''A module-level docstring
