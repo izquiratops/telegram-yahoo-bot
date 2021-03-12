@@ -1,5 +1,4 @@
 import re, json
-# API Yahoo Finance update
 from math import floor
 from datetime import datetime
 from collections import deque
@@ -19,39 +18,38 @@ from telegram.ext import (
 BASEURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
 
 class Stock:
-	def getRockets(self, percent: str) -> str:
-		times = floor(float(percent) / 5)
-		if (times > 0):
-			return '🚀' * times
-		else:
-			return '📉' * -times
-
 	def __str__(self) -> str:
 		message: str = f"🔸 {self.displayName} ${self.symbol.upper()}\n"
 
 		# Pre Market
-		try:
-			rockets = self.getRockets(self.preMarket['ChangePercent'])
-			message +=	f"<b>Pre Market</b> {rockets}\n" \
-						f"{self.preMarket['Price']}$ " \
-						f"({self.preMarket['Change']}$, {self.preMarket['ChangePercent']}%)\n"
-		except:
-			pass
+		if 'pre' in self.marketValues:
+			if (self.marketValues['pre']['changeFactor'] > 0):
+				emoji = '📈'
+			else:
+				emoji = '📉'
+			message +=	f"<b>Pre Market</b> {emoji}\n" \
+						f"{self.marketValues['pre']['Price']}$ " \
+						f"({self.marketValues['pre']['Change']}$, {self.marketValues['pre']['ChangePercent']}%)\n"
 
-		# Regular Market 
-		rockets = self.getRockets(self.regularMarket['ChangePercent'])
-		message +=	f"<b>Regular Market</b> {rockets}\n" \
-					f"{self.regularMarket['Price']}$ " \
-					f"({self.regularMarket['Change']}$, {self.regularMarket['ChangePercent']}%)\n"
+		# Regular Market
+		if 'regular' in self.marketValues:
+			if (self.marketValues['regular']['changeFactor'] > 0):
+				emoji = '📈'
+			else:
+				emoji = '📉'
+			message +=	f"<b>Regular Market</b> {emoji}\n" \
+						f"{self.marketValues['regular']['Price']}$ " \
+						f"({self.marketValues['regular']['Change']}$, {self.marketValues['regular']['ChangePercent']}%)\n"
 
 		# After hours
-		try:
-			rockets = self.getRockets(self.postMarket['ChangePercent'])
-			message +=	f"<b>After Hours</b> {rockets}\n" \
-						f"{self.postMarket['Price']}$ " \
-						f"({self.postMarket['Change']}$, {self.postMarket['ChangePercent']}%)\n"
-		except:
-			pass
+		if 'post' in self.marketValues:
+			if (self.marketValues['post']['changeFactor'] > 0):
+				emoji = '📈'
+			else:
+				emoji = '📉'
+			message +=	f"<b>After Hours</b> {emoji}\n" \
+						f"{self.marketValues['post']['Price']}$ " \
+						f"({self.marketValues['post']['Change']}$, {self.marketValues['post']['ChangePercent']}%)\n"
 
 		return message
 
@@ -67,28 +65,31 @@ class Stock:
 		else:
 			self.displayName = obj['shortName']
 
-		marketTempalte = ['Price','Change','ChangePercent']
+		# 'marketValues' is a dict with 3 keys: Regular, Pre and Post.
+		# Each one has Price, Change and ChangePercent
+		marketTemplate = ['Price','Change','ChangePercent']
+		self.marketValues = dict()
 
 		# Regular Market
 		regularMarketKeys = ['regularMarketPrice','regularMarketChange','regularMarketChangePercent']
 		if obj.keys() >= set(regularMarketKeys):
-			self.regularMarket = {}
-			for prop, key in zip(marketTempalte, regularMarketKeys):
-				self.regularMarket[prop] = format(round(obj[key], 2))
+			for prop, key in zip(marketTemplate, regularMarketKeys):
+				self.marketValues['regular'][prop] = format(round(obj[key], 2))
+			self.marketValues['regular']['changeFactor'] = float(obj['ChangePercent'])
 
 		# After Hours
 		postMarketKeys = ['postMarketPrice','postMarketChange','postMarketChangePercent']
 		if obj.keys() >= set(postMarketKeys):
-			self.postMarket = {}
-			for prop, key in zip(marketTempalte, postMarketKeys):
-				self.postMarket[prop] = format(round(obj[key], 2))
+			for prop, key in zip(marketTemplate, postMarketKeys):
+				self.marketValues['post'][prop] = format(round(obj[key], 2))
+			self.marketValues['post']['changeFactor'] = float(obj['ChangePercent'])
 
 		# Pre Market
 		preMarketKeys = ['preMarketPrice','preMarketChange','preMarketChangePercent']
 		if obj.keys() >= set(preMarketKeys):
-			self.preMarket = {}
-			for prop, key in zip(marketTempalte, preMarketKeys):
-				self.preMarket[prop] = format(round(obj[key], 2))
+			for prop, key in zip(marketTemplate, preMarketKeys):
+				self.marketValues['pre'][prop] = format(round(obj[key], 2))
+			self.marketValues['pre']['changeFactor'] = float(obj['ChangePercent'])
 
 class Bort:
 	'''A module-level docstring
@@ -144,13 +145,20 @@ class Bort:
 			self.logger.error(f'{user.full_name} [{update.message.from_user.id}]: {uniqueSymbols}')
 
 		# Write bot response
-		response: str = ''
+		stocks = []
 		for element in read['quoteResponse']['result']:
 			stock = Stock(element)
-			response += f'{stock}\n'
-			self.logger.info(f'{user.full_name} [{update.message.from_user.id}]: {stock.symbol}')
+			stocks.append(stock)
 
-		if response:
+		response: str = ''
+		if len(stocks) > 0:
+			# Sorted by change value
+			stocks = sorted(stocks, key=lambda k: k['regular']['changeFactor'])
+			# Write Response
+			for stock in stocks:
+				response += f'{stock}\n'
+				self.logger.info(f'{user.full_name} [{update.message.from_user.id}]: {stock.symbol}')
+			# Reply!
 			update.message.reply_text(response, parse_mode='HTML', reply_to_message_id=update.message.message_id)
 
 	def tail(self, update: Update, context: CallbackContext) -> None:
