@@ -19,11 +19,12 @@ BASEURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
 
 class Stock:
 	def __str__(self) -> str:
-		message: str = f"🔸 {self.displayName} ${self.symbol.upper()}\n"
+		rockets: str = '🚀' * floor(self.totalChangePercent / 5)
+		message: str = f"🔸 {self.displayName} ${self.symbol.upper()} {rockets}\n"
 
 		# Pre Market
 		if 'pre' in self.marketValues:
-			if (self.marketValues['pre']['changeFactor'] > 0):
+			if (float(self.marketValues['pre']['ChangePercent']) > 0):
 				emoji = '📈'
 			else:
 				emoji = '📉'
@@ -33,7 +34,7 @@ class Stock:
 
 		# Regular Market
 		if 'regular' in self.marketValues:
-			if (self.marketValues['regular']['changeFactor'] > 0):
+			if (float(self.marketValues['regular']['ChangePercent']) > 0):
 				emoji = '📈'
 			else:
 				emoji = '📉'
@@ -43,7 +44,7 @@ class Stock:
 
 		# After hours
 		if 'post' in self.marketValues:
-			if (self.marketValues['post']['changeFactor'] > 0):
+			if (float(self.marketValues['post']['ChangePercent']) > 0):
 				emoji = '📈'
 			else:
 				emoji = '📉'
@@ -68,28 +69,32 @@ class Stock:
 		# 'marketValues' is a dict with 3 keys: Regular, Pre and Post.
 		# Each one has Price, Change and ChangePercent
 		marketTemplate = ['Price','Change','ChangePercent']
+		self.totalChangePercent = 0
 		self.marketValues = dict()
 
 		# Regular Market
 		regularMarketKeys = ['regularMarketPrice','regularMarketChange','regularMarketChangePercent']
 		if obj.keys() >= set(regularMarketKeys):
+			self.totalChangePercent += float(obj['regularMarketChangePercent'])
+			self.marketValues['regular'] = dict()
 			for prop, key in zip(marketTemplate, regularMarketKeys):
 				self.marketValues['regular'][prop] = format(round(obj[key], 2))
-			self.marketValues['regular']['changeFactor'] = float(obj['ChangePercent'])
 
 		# After Hours
 		postMarketKeys = ['postMarketPrice','postMarketChange','postMarketChangePercent']
 		if obj.keys() >= set(postMarketKeys):
+			self.totalChangePercent += float(obj['postMarketChangePercent'])
+			self.marketValues['post'] = dict()
 			for prop, key in zip(marketTemplate, postMarketKeys):
 				self.marketValues['post'][prop] = format(round(obj[key], 2))
-			self.marketValues['post']['changeFactor'] = float(obj['ChangePercent'])
 
 		# Pre Market
 		preMarketKeys = ['preMarketPrice','preMarketChange','preMarketChangePercent']
 		if obj.keys() >= set(preMarketKeys):
+			self.totalChangePercent += float(obj['postMarketChangePercent'])
+			self.marketValues['pre'] = dict()
 			for prop, key in zip(marketTemplate, preMarketKeys):
 				self.marketValues['pre'][prop] = format(round(obj[key], 2))
-			self.marketValues['pre']['changeFactor'] = float(obj['ChangePercent'])
 
 class Bort:
 	'''A module-level docstring
@@ -150,14 +155,16 @@ class Bort:
 			stock = Stock(element)
 			stocks.append(stock)
 
-		response: str = ''
 		if len(stocks) > 0:
 			# Sorted by change value
-			stocks = sorted(stocks, key=lambda k: k['regular']['changeFactor'])
+			# stocks.sort(key=lambda x: x.totalChangePercent, reverse=True)
+
 			# Write Response
+			response: str = ''
 			for stock in stocks:
 				response += f'{stock}\n'
 				self.logger.info(f'{user.full_name} [{update.message.from_user.id}]: {stock.symbol}')
+
 			# Reply!
 			update.message.reply_text(response, parse_mode='HTML', reply_to_message_id=update.message.message_id)
 
