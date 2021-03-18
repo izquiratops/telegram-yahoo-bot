@@ -91,7 +91,7 @@ class Stock:
 		# Pre Market
 		preMarketKeys = ['preMarketPrice','preMarketChange','preMarketChangePercent']
 		if obj.keys() >= set(preMarketKeys):
-			self.totalChangePercent += float(obj['postMarketChangePercent'])
+			self.totalChangePercent += float(obj['preMarketChangePercent'])
 			self.marketValues['pre'] = dict()
 			for prop, key in zip(marketTemplate, preMarketKeys):
 				self.marketValues['pre'][prop] = format(round(obj[key], 2))
