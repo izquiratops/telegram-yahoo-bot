@@ -1,5 +1,5 @@
 # Telegram Stock Bot
 
-Pretty much what the title says. Write your symbol with a slash behind and get the current price per share.
+Bort will tell you the current price of any stock. Just make sure you type $ before the symbol and wait for a response.
 
-![](https://github.com/izquiratops/telegram-stock-bot/blob/main/not_mooning_yet.PNG)
+![](https://github.com/izquiratops/telegram-stock-bot/blob/main/screen.png)
