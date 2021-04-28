@@ -1,6 +1,10 @@
+# Logging
 import logging
 from logging.handlers import RotatingFileHandler
+
+# Bort
 from modules.bort import Bort
+
 
 def setupLoggerHandler() -> RotatingFileHandler:
 	logFormatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
