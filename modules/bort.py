@@ -49,6 +49,12 @@ class Bort:
             parse_mode='HTML'
         )
 
+    def tail(self, update: Update, context: CallbackContext) -> None:
+        with open('log.txt') as file:
+            tail = deque(file, 10)
+        for line in tail:
+            update.message.reply_text(line)
+
     def stock(self, update: Update, context: CallbackContext) -> None:
         # Ignore message edits OR requests older than 5 mins
         if not update.message or self.timeDiff(update.message.date) > 5:
@@ -89,31 +95,32 @@ class Bort:
             update.message.reply_text(
                 response, parse_mode='HTML', reply_to_message_id=update.message.message_id)
 
-    def tail(self, update: Update, context: CallbackContext) -> None:
-        with open('log.txt') as file:
-            tail = deque(file, 10)
-        for line in tail:
-            update.message.reply_text(line)
-
     def callback_alarm(self, context: CallbackContext) -> None:
         job = context.job
         context.bot.send_message(job.context, text='Beep!')
 
-    def set_timer(self, update: Update, context: CallbackContext) -> None:
-        update.message.reply_text('Timer response')
+    def enable_alarm(self, update: Update, context: CallbackContext) -> None:
+        # update.message.reply_text('Timer response')
         chat_id = update.message.chat_id
         context.job_queue.run_repeating(callback=self.callback_alarm,
                                         interval=10,
                                         context=chat_id,
                                         name=str(chat_id))
-    
-    def state_timer(self, update: Update, context: CallbackContext) -> None:
+
+    def disable_alarm(self, update: Update, context: CallbackContext) -> None:
         name = str(update.message.chat_id)
         current_jobs = context.job_queue.get_jobs_by_name(name)
-        if any(current_job.name == name for current_job in current_jobs):
+        for current_job in current_jobs:
+            current_job.schedule_removal()
+    
+    def state_alarm(self, update: Update, context: CallbackContext) -> None:
+        name = str(update.message.chat_id)
+        current_jobs = context.job_queue.get_jobs_by_name(name)
+        if current_jobs:
             update.message.reply_text('Currently active')
         else:
             update.message.reply_text('Not active')
+
 
     def __init__(self, logger: Logger):
         with open('token.txt', 'r') as f:
@@ -129,16 +136,18 @@ class Bort:
         start_handler = CommandHandler('start', self.start)
         help_handler = CommandHandler('help', self.helper)
         command_handler = CommandHandler('tail', self.tail)
-        set_timer_handler = CommandHandler('setTimer', self.set_timer)
-        state_timer_handler = CommandHandler('stateTimer', self.state_timer)
-        # message_handler = MessageHandler(Filters.text, self.stock)
+        set_alarm_handler = CommandHandler('setAlarm', self.enable_alarm)
+        remove_alarm_handler = CommandHandler('removeAlarm', self.disable_alarm)
+        state_alarm_handler = CommandHandler('stateAlarm', self.state_alarm)
+        message_handler = MessageHandler(Filters.text, self.stock)
 
         dispatcher.add_handler(start_handler)
         dispatcher.add_handler(help_handler)
         dispatcher.add_handler(command_handler)
-        dispatcher.add_handler(set_timer_handler)
-        dispatcher.add_handler(state_timer_handler)
-        # dispatcher.add_handler(message_handler)
+        dispatcher.add_handler(set_alarm_handler)
+        dispatcher.add_handler(remove_alarm_handler)
+        dispatcher.add_handler(state_alarm_handler)
+        dispatcher.add_handler(message_handler)
 
         # Start the Bot
         self.updater.start_polling()
