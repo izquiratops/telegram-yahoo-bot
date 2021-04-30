@@ -30,8 +30,12 @@ def main() -> None:
 	# Setup Telegram Bot logic
 	bort = Bort(logger)
 
-	# Start bot
+	# Start the Bot
 	bort.updater.start_polling()
+	
+	# Block until you press Ctrl-C or the process receives SIGINT, SIGTERM or
+	# SIGABRT. This should be used most of the time, since start_polling() is
+	# non-blocking and will stop the bot gracefully.
 	bort.updater.idle()
 
 if __name__ == '__main__':
