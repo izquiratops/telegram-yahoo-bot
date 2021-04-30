@@ -1,108 +1,22 @@
-# Python imports
 import re
 import json
-from math import floor
 from datetime import datetime
 from urllib.request import urlopen
-from dataclasses import dataclass
 from collections import deque
 
-# Logger
 from logging import Logger
 
-# Telegram API
+from modules.stock import Stock
+
 from telegram import Update
 from telegram.ext import (
     Updater,
     Filters,
     CallbackContext,
     MessageHandler,
-    CommandHandler
+    CommandHandler,
+    JobQueue
 )
-
-
-@dataclass
-class Stock:
-    symbol: str
-    displayName: str
-    totalChangePercent: float
-
-    regularMarketPrice: float
-    regularMarketChange: float
-    regularMarketChangePercent: float
-
-    postMarketPrice: float
-    postMarketChange: float
-    postMarketChangePercent: float
-
-    preMarketPrice: float
-    preMarketChange: float
-    preMarketChangePercent: float
-
-    def __str__(self) -> str:
-        rockets: str = '🚀' * floor(self.totalChangePercent / 5)
-        message: str = f"🔸 {self.displayName} ${self.symbol.upper()} {rockets}\n"
-
-        if 'preMarketPrice' in dir(self):
-            if (float(self.preMarketChangePercent) > 0):
-                emoji = '📈'
-            else:
-                emoji = '📉'
-            message += f"<b>Pre Market</b> {emoji}\n" \
-                f"{self.preMarketPrice}$ " \
-                f"({self.preMarketChange}$, {self.preMarketChangePercent}%)\n"
-
-        if 'regularMarketPrice' in dir(self):
-            if (float(self.regularMarketChangePercent) > 0):
-                emoji = '📈'
-            else:
-                emoji = '📉'
-            message += f"<b>Regular Market</b> {emoji}\n" \
-                f"{self.regularMarketPrice}$ " \
-                f"({self.regularMarketChange}$, {self.regularMarketChangePercent}%)\n"
-
-        if 'postMarketPrice' in dir(self):
-            if (float(self.postMarketChangePercent) > 0):
-                emoji = '📈'
-            else:
-                emoji = '📉'
-            message += f"<b>After Hours</b> {emoji}\n" \
-                f"{self.postMarketPrice}$ " \
-                f"({self.postMarketChange}$, {self.postMarketChangePercent}%)\n"
-
-        return message
-
-    def __init__(self, obj) -> None:
-        self.symbol = obj['symbol']
-        self.displayName = obj['displayName'] or obj['longName'] or obj['shortName']
-        self.totalChangePercent = 0
-
-        if 'regularMarketPrice' in obj:
-            self.regularMarketPrice = format(
-                round(obj['regularMarketPrice'], 2))
-            self.regularMarketChange = format(
-                round(obj['regularMarketChange'], 2))
-            self.regularMarketChangePercent = format(
-                round(obj['regularMarketChangePercent'], 2))
-            self.totalChangePercent += float(obj['regularMarketChangePercent'])
-
-        if 'postMarketPrice' in obj:
-            self.postMarketPrice = format(
-                round(obj['postMarketPrice'], 2))
-            self.postMarketChange = format(
-                round(obj['postMarketChange'], 2))
-            self.postMarketChangePercent = format(
-                round(obj['postMarketChangePercent'], 2))
-            self.totalChangePercent += float(obj['postMarketChangePercent'])
-
-        if 'preMarketPrice' in obj:
-            self.preMarketPrice = format(
-                round(obj['preMarketPrice'], 2))
-            self.preMarketChange = format(
-                round(obj['preMarketChange'], 2))
-            self.preMarketChangePercent = format(
-                round(obj['preMarketChangePercent'], 2))
-            self.totalChangePercent += float(obj['preMarketChangePercent'])
 
 
 class Bort:
@@ -181,6 +95,26 @@ class Bort:
         for line in tail:
             update.message.reply_text(line)
 
+    def callback_alarm(self, context: CallbackContext) -> None:
+        job = context.job
+        context.bot.send_message(job.context, text='Beep!')
+
+    def set_timer(self, update: Update, context: CallbackContext) -> None:
+        update.message.reply_text('Timer response')
+        chat_id = update.message.chat_id
+        context.job_queue.run_repeating(callback=self.callback_alarm,
+                                        interval=10,
+                                        context=chat_id,
+                                        name=str(chat_id))
+    
+    def state_timer(self, update: Update, context: CallbackContext) -> None:
+        name = str(update.message.chat_id)
+        current_jobs = context.job_queue.get_jobs_by_name(name)
+        if any(current_job.name == name for current_job in current_jobs):
+            update.message.reply_text('Currently active')
+        else:
+            update.message.reply_text('Not active')
+
     def __init__(self, logger: Logger):
         with open('token.txt', 'r') as f:
             token = f.readline().replace('\n', '')
@@ -191,7 +125,25 @@ class Bort:
 
         # Handlers
         dispatcher = self.updater.dispatcher
-        dispatcher.add_handler(CommandHandler('start', self.start))
-        dispatcher.add_handler(CommandHandler('help', self.helper))
-        dispatcher.add_handler(CommandHandler('tail', self.tail))
-        dispatcher.add_handler(MessageHandler(Filters.text, self.stock))
+
+        start_handler = CommandHandler('start', self.start)
+        help_handler = CommandHandler('help', self.helper)
+        command_handler = CommandHandler('tail', self.tail)
+        set_timer_handler = CommandHandler('setTimer', self.set_timer)
+        state_timer_handler = CommandHandler('stateTimer', self.state_timer)
+        # message_handler = MessageHandler(Filters.text, self.stock)
+
+        dispatcher.add_handler(start_handler)
+        dispatcher.add_handler(help_handler)
+        dispatcher.add_handler(command_handler)
+        dispatcher.add_handler(set_timer_handler)
+        dispatcher.add_handler(state_timer_handler)
+        # dispatcher.add_handler(message_handler)
+
+        # Start the Bot
+        self.updater.start_polling()
+
+        # Block until you press Ctrl-C or the process receives SIGINT, SIGTERM or
+        # SIGABRT. This should be used most of the time, since start_polling() is
+        # non-blocking and will stop the bot gracefully.
+        self.updater.idle()
