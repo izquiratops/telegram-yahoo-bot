@@ -4,7 +4,7 @@ from datetime import datetime
 from urllib.request import urlopen
 from collections import deque
 
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, ForceReply
 from telegram.ext import (
     Updater,
     Filters,
@@ -16,13 +16,12 @@ from telegram.ext import (
 )
 
 from modules.stock import Stock
-from modules.alerts import AlertService
+from modules.alerts import AlertService, Alert
 
 from logging import Logger
 
 
 SETTING_VALUE = range(1)
-BASEURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
 
 
 class Bort:
@@ -39,19 +38,32 @@ class Bort:
         now = datetime.utcnow()
         return (now - date).total_seconds() / 60
 
+    def chunks(self, lst, n):
+        # From lst to chunks of length n
+        for i in range(0, len(lst), n):
+            # Lambda function to map the content from Alert object into a string
+            yield [f'{x}' for x in lst[i:i + n]]
+
+    def requestSymbols(self, symbols: str) -> list:
+        BASEURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
+        with urlopen(BASEURL + symbols, timeout=10) as response:
+            read = response.read()
+            read = json.loads(read)
+
+        return read['quoteResponse']['result']
+
     def start(self, update: Update, context: CallbackContext) -> None:
         update.message.reply_text(
-            '<i>You can’t beat the market but you can beat your meat</i>\n\n'
+            text='<i>You can’t beat the market but you can beat your meat</i>\n\n'
             '- Warren Buffet probably',
             parse_mode='HTML')
 
     def helper(self, update: Update, context: CallbackContext) -> None:
         update.message.reply_text(
-            "<b>/start</b> - Greetings from Bort\n"
-            "<b>/help</b> - You're currently here\n"
-            "<b>... $<i>insert_symbol_here</i></b> ... - Ask for the price of a stock\n",
-            parse_mode='HTML'
-        )
+            text='<b>/start</b> - Greetings from Bort\n'
+            '<b>/help</b> - You\'re currently here\n'
+            '<b>... $<i>insert_symbol_here</i></b> ... - Ask for the price of a stock\n',
+            parse_mode='HTML')
 
     def tail(self, update: Update, context: CallbackContext) -> None:
         with open('log.txt') as file:
@@ -78,37 +90,56 @@ class Bort:
         unique_symbols = ','.join(unique_symbols)
 
         # Yahoo Finance Request
-        try:
-            with urlopen(BASEURL + unique_symbols, timeout=10) as response:
-                read = response.read()
-                read = json.loads(read)
-        except:
+        response = self.requestSymbols(unique_symbols)
+        if not response:
             self.logger.error(
-                f'{user.full_name} [{update.message.from_user.id}]: {unique_symbols}')
+                f'{user.full_name} '
+                f'[{update.message.from_user.id}]: '
+                f'{unique_symbols}')
+            return
 
         # Write Response
-        response: str = ''
-        for element in read['quoteResponse']['result']:
+        response_text: str = ''
+        for element in response:
             stock = Stock(element)
-            response += f'{stock}\n'
+            response_text += f'{stock}\n'
             self.logger.info(
-                f'{user.full_name} [{update.message.from_user.id}]: {stock.symbol}')
+                f'{user.full_name} '
+                f'[{update.message.from_user.id}]: '
+                f'{stock.symbol}')
 
         # Reply!
-        if (response != ''):
+        if (response_text != ''):
             update.message.reply_text(
-                response,
+                text=response_text,
                 parse_mode='HTML',
                 reply_to_message_id=update.message.message_id)
 
     def callback_alert(self, context: CallbackContext) -> None:
         job = context.job
-        context.bot.send_message(job.context, text='Beep!')
+        chat_id: int = job.name
+        alerts = self.alert_service.get_alerts(chat_id)
+
+        for alert in alerts:
+            # Check every alarm for this chat
+            response = self.requestSymbols(alert.symbol)
+            current_price = Stock(response[0]).getLatestPrice()
+
+            min = min(alert.reference_point, current_price)
+            max = max(alert.reference_point, current_price)
+            if min < alert.target_point < max:
+                # Once the alarm is triggered it's removed from db too
+                self.alert_service.remove_alert(chat_id, alert)
+
+                # Response
+                message = f'{alert.symbol} has passed from {alert.target_point}!' \
+                          f'Current price: {current_price}'
+                context.bot.send_message(job.context, text=message)
 
     def enable_alerts(self, update: Update, context: CallbackContext) -> None:
         update.message.reply_text('Notifications activated 🎉🥳')
 
-        chat_id = update.message.chat_id
+        chat_id: int = update.message.chat_id
         context.job_queue.run_repeating(callback=self.callback_alert,
                                         interval=10,
                                         context=chat_id,
@@ -125,31 +156,111 @@ class Bort:
     def state_alerts(self, update: Update, context: CallbackContext) -> None:
         name = str(update.message.chat_id)
         current_jobs = context.job_queue.get_jobs_by_name(name)
-        if current_jobs:
-            update.message.reply_text('Currently active')
-        else:
-            update.message.reply_text('Not active')
 
-        # TODO: List every alarm from this chat_id
+        message: str = ''
+        if current_jobs:
+            message += 'Currently active\n\n'
+        else:
+            message += 'Not active\n\n'
+
+        alerts = self.alert_service.get_alerts(name)
+        for alert in alerts:
+            message += f'{alert.symbol.upper()}: {alert.target_point}\n'
+
+        update.message.reply_text(message)
 
     def asking_new_alert(self, update: Update, _: CallbackContext) -> int:
         update.message.reply_text(
-			'Tell me which symbol and price like this: $AAPL 250.50 \nOr use the <b>/cancel</b> command.',
-			parse_mode='HTML', 
-			reply_to_message_id=update.message.message_id)
+            text='Tell me which symbol and price.\nLike this <b>AAPL 250.50</b>',
+            parse_mode='HTML',
+            reply_to_message_id=update.message.message_id,
+            reply_markup=ForceReply())
 
         return SETTING_VALUE
 
     def setting_new_alert(self, update: Update, _: CallbackContext) -> int:
-        update.message.reply_text('Done! 🎉',
-			reply_to_message_id=update.message.message_id)
+        name = str(update.message.chat_id)
 
+        # Messages that doesn't reply the bot are ignored
+        if not update.message.reply_to_message:
+            return ConversationHandler.END
+
+        # Messages must follow the pattern SYMBOL *space* PRICE
+        try:
+            symbol, target = update.message.text.split(' ')
+        except:
+            update.message.reply_text(
+                text='Bad syntax',
+                reply_to_message_id=update.message.message_id)
+            return ConversationHandler.END
+
+        # Current price of the stock needed
+        response = self.requestSymbols(symbol)
+        if not response:
+            update.message.reply_text(
+                text='Symbol not found',
+                reply_to_message_id=update.message.message_id)
+            return ConversationHandler.END
+
+        # Save the new Alert into the database
+        try:
+            data = {
+                # Saved always as lowercase
+                'symbol': symbol.lower(),
+                'reference_point': Stock(response[0]).getLatestPrice(),
+                'target_point': float(target)
+            }
+            self.alert_service.create_alert(name, Alert(data))
+        except:
+            update.message.reply_text(
+                text='<i>Oh oh made an oopsie</i>',
+                parse_mode='HTML',
+                reply_to_message_id=update.message.message_id)
+            return ConversationHandler.END
+
+        # Response
+        update.message.reply_text(
+            text='Done! 🎉',
+            reply_to_message_id=update.message.message_id)
         return ConversationHandler.END
 
-    def cancel_new_alert(self, update: Update, _: CallbackContext) -> int:
-        update.message.reply_text('I\'m not longer waiting for a response',
-			reply_to_message_id=update.message.message_id)
+    def asking_delete_alert(self, update: Update, _: CallbackContext) -> int:
+        name = str(update.message.chat_id)
+        # Get current alerts for this chat
+        alerts = self.alert_service.get_alerts(name)
+        # Add 'Cancel' option
+        alerts.append('Nevermind 🤔')
+        # Setup keyboard markup
+        reply_keyboard = list(self.chunks(alerts, 2))
 
+        markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
+        update.message.reply_text(
+            text='beep',
+            reply_to_message_id=update.message.message_id,
+            reply_markup=markup)
+        return SETTING_VALUE
+
+    def deleting_alert(self, update: Update, context: CallbackContext) -> int:
+        name = str(update.message.chat_id)
+
+        if update.message.text == 'Nevermind 🤔':
+            update.message.reply_text(
+            text='👌',
+            reply_to_message_id=update.message.message_id,
+            reply_markup=ReplyKeyboardRemove())
+            return ConversationHandler.END
+
+        # AAPL @250.0 --> Symbol: AAPL | Target: 250.0
+        symbol, target_point = update.message.text.split(' @')
+        # Search for the selected Alert
+        result = self.alert_service.search_by_symbol_and_target(name, symbol, target_point)
+        # This Alert could be removed between first /deleteAlert and reply by other user (on groups)
+        # TODO: ...
+
+        update.message.reply_text(
+            text='boop',
+            reply_to_message_id=update.message.message_id,
+            reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
 
     def __init__(self, logger: Logger):
@@ -163,20 +274,45 @@ class Bort:
         # Alert class to get access into the db
         self.alert_service = AlertService()
 
-        # Handlers
+        # Setup dispatcher
         dispatcher = self.updater.dispatcher
 
+        # Common handlers
         start_handler = CommandHandler('start', self.start)
         help_handler = CommandHandler('help', self.helper)
         command_handler = CommandHandler('tail', self.tail)
-        enable_alerts_handler = CommandHandler('enableAlerts', self.enable_alerts)
-        remove_alerts_handler = CommandHandler('disableAlerts', self.disable_alerts)
-        state_alerts_handler = CommandHandler('stateAlerts', self.state_alerts)
+
+        # Alert handlers
+        enable_alerts_handler = CommandHandler(
+            'enableAlerts', self.enable_alerts)
+        remove_alerts_handler = CommandHandler(
+            'disableAlerts', self.disable_alerts)
+        state_alerts_handler = CommandHandler(
+            'stateAlerts', self.state_alerts)
+        asking_new_alert_handler = CommandHandler(
+            'createAlert', self.asking_new_alert)
+        setting_new_alert_handler = MessageHandler(
+            Filters.text, self.setting_new_alert)
+        asking_delete_alert_handler = CommandHandler(
+            'deleteAlert', self.asking_delete_alert)
+        deleting_alert_handler = MessageHandler(
+            Filters.text, self.deleting_alert)
+
+        # Create Alert conversation
         create_new_alert_handler = ConversationHandler(
-            entry_points=[CommandHandler('createAlert', self.asking_new_alert)],
-            states={ SETTING_VALUE: [MessageHandler(Filters.regex('[$][^\\s]*'), self.setting_new_alert)] },
-            fallbacks=[CommandHandler('cancel', self.cancel_new_alert)]
-        )
+            entry_points=[asking_new_alert_handler],
+            states={SETTING_VALUE: [setting_new_alert_handler]},
+            fallbacks=[],
+            conversation_timeout=60)
+
+        # Delete Alert conversation
+        delete_alert_handler = ConversationHandler(
+            entry_points=[asking_delete_alert_handler],
+            states={SETTING_VALUE: [deleting_alert_handler]},
+            fallbacks=[],
+            conversation_timeout=60)
+
+        # Handler for getting stocks on messages
         message_handler = MessageHandler(Filters.text, self.stock)
 
         dispatcher.add_handler(start_handler)
@@ -186,4 +322,5 @@ class Bort:
         dispatcher.add_handler(remove_alerts_handler)
         dispatcher.add_handler(state_alerts_handler)
         dispatcher.add_handler(create_new_alert_handler)
+        dispatcher.add_handler(delete_alert_handler)
         dispatcher.add_handler(message_handler)

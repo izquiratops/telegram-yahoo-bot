@@ -14,27 +14,29 @@ class Stock:
 
     symbol: str
     displayName: str
-    totalChangePercent: float
+    totalChangePercent: float = 0
 
-    regularMarketPrice: float
-    regularMarketChange: float
-    regularMarketChangePercent: float
+    regularMarketPrice: float = 0.0
+    regularMarketChange: float = 0.0
+    regularMarketChangePercent: float = 0.0
 
-    postMarketPrice: float
-    postMarketChange: float
-    postMarketChangePercent: float
+    postMarketPrice: float = 0.0
+    postMarketChange: float = 0.0
+    postMarketChangePercent: float = 0.0
 
-    preMarketPrice: float
-    preMarketChange: float
-    preMarketChangePercent: float
+    preMarketPrice: float = 0.0
+    preMarketChange: float = 0.0
+    preMarketChangePercent: float = 0.0
 
+    def getLatestPrice(self) -> float:
+        return self.preMarketPrice or self.postMarketPrice or self.regularMarketPrice
 
     def __str__(self) -> str:
         rockets: str = '🚀' * floor(self.totalChangePercent / 5)
         message: str = f"🔸 {self.displayName} ${self.symbol.upper()} {rockets}\n"
 
-        if 'preMarketPrice' in dir(self):
-            if (float(self.preMarketChangePercent) > 0):
+        if self.preMarketPrice:
+            if (self.preMarketChangePercent > 0):
                 emoji = '📈'
             else:
                 emoji = '📉'
@@ -42,8 +44,8 @@ class Stock:
                 f"{self.preMarketPrice}$ " \
                 f"({self.preMarketChange}$, {self.preMarketChangePercent}%)\n"
 
-        if 'regularMarketPrice' in dir(self):
-            if (float(self.regularMarketChangePercent) > 0):
+        if self.regularMarketPrice:
+            if (self.regularMarketChangePercent > 0):
                 emoji = '📈'
             else:
                 emoji = '📉'
@@ -51,8 +53,8 @@ class Stock:
                 f"{self.regularMarketPrice}$ " \
                 f"({self.regularMarketChange}$, {self.regularMarketChangePercent}%)\n"
 
-        if 'postMarketPrice' in dir(self):
-            if (float(self.postMarketChangePercent) > 0):
+        if self.postMarketPrice:
+            if (self.postMarketChangePercent > 0):
                 emoji = '📈'
             else:
                 emoji = '📉'
@@ -65,31 +67,30 @@ class Stock:
     def __init__(self, obj) -> None:
         self.symbol = obj['symbol']
         self.displayName = obj['displayName'] or obj['longName'] or obj['shortName']
-        self.totalChangePercent = 0
 
         if 'regularMarketPrice' in obj:
-            self.regularMarketPrice = format(
-                round(obj['regularMarketPrice'], 2))
-            self.regularMarketChange = format(
-                round(obj['regularMarketChange'], 2))
-            self.regularMarketChangePercent = format(
-                round(obj['regularMarketChangePercent'], 2))
+            self.regularMarketPrice = float(format(
+                round(obj['regularMarketPrice'], 2)))
+            self.regularMarketChange = float(format(
+                round(obj['regularMarketChange'], 2)))
+            self.regularMarketChangePercent = float(format(
+                round(obj['regularMarketChangePercent'], 2)))
             self.totalChangePercent += float(obj['regularMarketChangePercent'])
 
         if 'postMarketPrice' in obj:
-            self.postMarketPrice = format(
-                round(obj['postMarketPrice'], 2))
-            self.postMarketChange = format(
-                round(obj['postMarketChange'], 2))
-            self.postMarketChangePercent = format(
-                round(obj['postMarketChangePercent'], 2))
+            self.postMarketPrice = float(format(
+                round(obj['postMarketPrice'], 2)))
+            self.postMarketChange = float(format(
+                round(obj['postMarketChange'], 2)))
+            self.postMarketChangePercent = float(format(
+                round(obj['postMarketChangePercent'], 2)))
             self.totalChangePercent += float(obj['postMarketChangePercent'])
 
         if 'preMarketPrice' in obj:
-            self.preMarketPrice = format(
-                round(obj['preMarketPrice'], 2))
-            self.preMarketChange = format(
-                round(obj['preMarketChange'], 2))
-            self.preMarketChangePercent = format(
-                round(obj['preMarketChangePercent'], 2))
+            self.preMarketPrice = float(format(
+                round(obj['preMarketPrice'], 2)))
+            self.preMarketChange = float(format(
+                round(obj['preMarketChange'], 2)))
+            self.preMarketChangePercent = float(format(
+                round(obj['preMarketChangePercent'], 2)))
             self.totalChangePercent += float(obj['preMarketChangePercent'])
