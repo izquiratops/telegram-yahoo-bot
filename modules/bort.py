@@ -140,7 +140,7 @@ class Bort:
 
         chat_id: int = update.message.chat_id
         context.job_queue.run_repeating(callback=self.callback_alert,
-                                        interval=10,
+                                        interval=60 * 10,
                                         context=chat_id,
                                         name=str(chat_id))
 
