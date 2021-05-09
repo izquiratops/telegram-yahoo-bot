@@ -20,7 +20,6 @@ from modules.alerts import AlertService, Alert
 
 from logging import Logger
 
-
 SETTING_VALUE = range(1)
 
 
@@ -125,15 +124,15 @@ class Bort:
             response = self.requestSymbols(alert.symbol)
             current_price = Stock(response[0]).getLatestPrice()
 
-            min = min(alert.reference_point, current_price)
-            max = max(alert.reference_point, current_price)
-            if min < alert.target_point < max:
+            minRange = min(alert.reference_point, current_price)
+            maxRange = max(alert.reference_point, current_price)
+            if minRange < alert.target_point < maxRange:
                 # Once the alarm is triggered it's removed from db too
                 self.alert_service.remove_alert(chat_id, alert)
 
                 # Response
-                message = f'{alert.symbol} has passed from {alert.target_point}!' \
-                          f'Current price: {current_price}'
+                message = f'{alert.symbol} has passed from {alert.target_point}!'
+                # f'Current price: {current_price}'
                 context.bot.send_message(job.context, text=message)
 
     def enable_alerts(self, update: Update, context: CallbackContext) -> None:
@@ -209,6 +208,8 @@ class Bort:
                 'symbol': symbol.lower(),
                 'reference_point': Stock(response[0]).getLatestPrice(),
                 'target_point': float(target)
+                # Testing value
+                # 'reference_point': 1.00,
             }
             self.alert_service.create_alert(name, Alert(data))
         except:
@@ -243,24 +244,35 @@ class Bort:
     def deleting_alert(self, update: Update, context: CallbackContext) -> int:
         name = str(update.message.chat_id)
 
-        if update.message.text == 'Nevermind 🤔':
+        # AAPL @250.0 --> Symbol: AAPL | Target: 250.0
+        try:
+            symbol, target_point = update.message.text.split(' ')
+        except:
             update.message.reply_text(
-            text='👌',
+            text='🥺',
             reply_to_message_id=update.message.message_id,
             reply_markup=ReplyKeyboardRemove())
             return ConversationHandler.END
 
-        # AAPL @250.0 --> Symbol: AAPL | Target: 250.0
-        symbol, target_point = update.message.text.split(' @')
-        # Search for the selected Alert
-        result = self.alert_service.search_by_symbol_and_target(name, symbol, target_point)
-        # This Alert could be removed between first /deleteAlert and reply by other user (on groups)
-        # TODO: ...
+        try:
+            # Search for the selected Alert
+            result = self.alert_service.search_markup_response(
+                chat_id = name, 
+                symbol = symbol.lower(),
+                target_point = float(target_point))
+            # Remove from db
+            self.alert_service.remove_alert(name, result)
+            # Reply
+            update.message.reply_text(
+                text='Done',
+                reply_to_message_id=update.message.message_id,
+                reply_markup=ReplyKeyboardRemove())
+        except:
+            update.message.reply_text(
+                text='I couldn\'t remove it',
+                reply_to_message_id=update.message.message_id,
+                reply_markup=ReplyKeyboardRemove())
 
-        update.message.reply_text(
-            text='boop',
-            reply_to_message_id=update.message.message_id,
-            reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
 
     def __init__(self, logger: Logger):
@@ -284,17 +296,17 @@ class Bort:
 
         # Alert handlers
         enable_alerts_handler = CommandHandler(
-            'enableAlerts', self.enable_alerts)
+            'enable', self.enable_alerts)
         remove_alerts_handler = CommandHandler(
-            'disableAlerts', self.disable_alerts)
+            'disable', self.disable_alerts)
         state_alerts_handler = CommandHandler(
-            'stateAlerts', self.state_alerts)
+            'list', self.state_alerts)
         asking_new_alert_handler = CommandHandler(
-            'createAlert', self.asking_new_alert)
+            'create', self.asking_new_alert)
         setting_new_alert_handler = MessageHandler(
             Filters.text, self.setting_new_alert)
         asking_delete_alert_handler = CommandHandler(
-            'deleteAlert', self.asking_delete_alert)
+            'delete', self.asking_delete_alert)
         deleting_alert_handler = MessageHandler(
             Filters.text, self.deleting_alert)
 

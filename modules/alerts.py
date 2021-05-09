@@ -18,7 +18,7 @@ class Alert:
     target_point: float
 
     def __str__(self) -> str:
-        return f'{self.symbol.upper()} @{self.target_point}'
+        return f'{self.symbol.upper()} {self.target_point}'
 
     def __init__(self, dictionary: dict):
         for k, v in dictionary.items():
@@ -49,19 +49,17 @@ class AlertService:
         try:
             table.remove(Query().fragment(asdict(alert)))
         except IndexError:
-            print('(!) --> Hey this failed')
-            pass
+            raise
 
-    def search_by_symbol_and_target(self, chat_id: str, symbol: str, target_point: float) -> list:
+    def search_markup_response(self, chat_id: str, symbol: str, target_point: str) -> Alert:
         table = self.db.table(chat_id)
-
-        # Saved always as lowercase
-        symbol = symbol.lower()
-        results = table.search(Query().fragment({
-            'symbol': symbol,
-            'target_point': target_point
-        }))
-        return results
+        result = table.get(
+            (Query().symbol == symbol) & 
+            (Query().target_point == target_point))
+        try:
+            return Alert(result)
+        except:
+            raise
 
     def __init__(self) -> None:
         self.db = TinyDB('database.json')
