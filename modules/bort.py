@@ -11,8 +11,7 @@ from telegram.ext import (
     CallbackContext,
     MessageHandler,
     CommandHandler,
-    ConversationHandler,
-    JobQueue
+    ConversationHandler
 )
 
 from modules.stock import Stock
@@ -168,21 +167,16 @@ class Bort:
 
         update.message.reply_text(message)
 
-    def asking_new_alert(self, update: Update, _: CallbackContext) -> int:
+    def asking_add_alert(self, update: Update, _: CallbackContext) -> int:
         update.message.reply_text(
             text='Tell me which symbol and price.\nLike this <b>AAPL 250.50</b>',
             parse_mode='HTML',
-            reply_to_message_id=update.message.message_id,
-            reply_markup=ForceReply())
+            reply_to_message_id=update.message.message_id)
 
         return SETTING_VALUE
 
-    def setting_new_alert(self, update: Update, _: CallbackContext) -> int:
+    def creating_alert(self, update: Update, _: CallbackContext) -> int:
         name = str(update.message.chat_id)
-
-        # Messages that doesn't reply the bot are ignored
-        if not update.message.reply_to_message:
-            return ConversationHandler.END
 
         # Messages must follow the pattern SYMBOL *space* PRICE
         try:
@@ -234,14 +228,14 @@ class Bort:
         # Setup keyboard markup
         reply_keyboard = list(self.chunks(alerts, 2))
 
-        markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=False)
+        markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
         update.message.reply_text(
-            text='beep',
+            text='Which one?',
             reply_to_message_id=update.message.message_id,
             reply_markup=markup)
         return SETTING_VALUE
 
-    def deleting_alert(self, update: Update, context: CallbackContext) -> int:
+    def deleting_alert(self, update: Update, _: CallbackContext) -> int:
         name = str(update.message.chat_id)
 
         # AAPL @250.0 --> Symbol: AAPL | Target: 250.0
@@ -264,7 +258,7 @@ class Bort:
             self.alert_service.remove_alert(name, result)
             # Reply
             update.message.reply_text(
-                text='Done',
+                text='Done! 🎉',
                 reply_to_message_id=update.message.message_id,
                 reply_markup=ReplyKeyboardRemove())
         except:
@@ -301,26 +295,26 @@ class Bort:
             'disable', self.disable_alerts)
         state_alerts_handler = CommandHandler(
             'list', self.state_alerts)
-        asking_new_alert_handler = CommandHandler(
-            'create', self.asking_new_alert)
-        setting_new_alert_handler = MessageHandler(
-            Filters.text, self.setting_new_alert)
+        asking_add_alert_handler = CommandHandler(
+            'create', self.asking_add_alert)
+        setting_add_alert_handler = MessageHandler(
+            Filters.text, self.creating_alert)
         asking_delete_alert_handler = CommandHandler(
             'delete', self.asking_delete_alert)
-        deleting_alert_handler = MessageHandler(
+        setting_delete_alert_handler = MessageHandler(
             Filters.text, self.deleting_alert)
 
         # Create Alert conversation
-        create_new_alert_handler = ConversationHandler(
-            entry_points=[asking_new_alert_handler],
-            states={SETTING_VALUE: [setting_new_alert_handler]},
+        create_alert_handler = ConversationHandler(
+            entry_points=[asking_add_alert_handler],
+            states={SETTING_VALUE: [setting_add_alert_handler]},
             fallbacks=[],
             conversation_timeout=60)
 
         # Delete Alert conversation
         delete_alert_handler = ConversationHandler(
             entry_points=[asking_delete_alert_handler],
-            states={SETTING_VALUE: [deleting_alert_handler]},
+            states={SETTING_VALUE: [setting_delete_alert_handler]},
             fallbacks=[],
             conversation_timeout=60)
 
@@ -333,6 +327,6 @@ class Bort:
         dispatcher.add_handler(enable_alerts_handler)
         dispatcher.add_handler(remove_alerts_handler)
         dispatcher.add_handler(state_alerts_handler)
-        dispatcher.add_handler(create_new_alert_handler)
+        dispatcher.add_handler(create_alert_handler)
         dispatcher.add_handler(delete_alert_handler)
         dispatcher.add_handler(message_handler)
