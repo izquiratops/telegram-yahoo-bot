@@ -42,7 +42,8 @@ class AlertService:
     def get_alerts(self, chat_id: str) -> list:
         table = self.db.table(chat_id)
         alerts = [Alert(alert) for alert in table.all()]
-        return alerts
+        price_sorted_alerts = sorted(alerts, key=lambda x: x.target_point)
+        return sorted(price_sorted_alerts, key=lambda x: x.symbol)
 
     def remove_alert(self, chat_id: str, alert: Alert) -> None:
         table = self.db.table(chat_id)

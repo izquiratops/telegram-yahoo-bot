@@ -14,7 +14,7 @@ class Stock:
 
     symbol: str
     displayName: str
-    totalChangePercent: float = 0
+    totalChangePercent: float = 0.0
 
     regularMarketPrice: float = 0.0
     regularMarketChange: float = 0.0
@@ -66,7 +66,14 @@ class Stock:
 
     def __init__(self, obj) -> None:
         self.symbol = obj['symbol']
-        self.displayName = obj['displayName'] or obj['longName'] or obj['shortName']
+
+        for prop in ['displayName', 'shortName', 'longName']:
+            if prop in obj:  
+                self.displayName = obj[prop]
+                break
+
+        if not self.displayName:
+            raise ValueError('Stock name not found')
 
         if 'regularMarketPrice' in obj:
             self.regularMarketPrice = float(format(
