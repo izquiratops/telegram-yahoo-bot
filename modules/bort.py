@@ -42,7 +42,7 @@ class Bort:
             # Lambda function to map the content from Alert object into a string
             yield [f'{x}' for x in lst[i:i + n]]
 
-    def requestSymbols(self, symbols: str) -> list:
+    def requestStockSymbols(self, symbols: str) -> list:
         BASEURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
         with urlopen(BASEURL + symbols, timeout=10) as response:
             read = response.read()
@@ -88,7 +88,7 @@ class Bort:
         unique_symbols = ','.join(unique_symbols)
 
         # Yahoo Finance Request
-        response = self.requestSymbols(unique_symbols)
+        response = self.requestStockSymbols(unique_symbols)
         if not response:
             self.logger.error(
                 f'{user.full_name} '
@@ -120,7 +120,7 @@ class Bort:
 
         for alert in alerts:
             # Check every alarm for this chat
-            response = self.requestSymbols(alert.symbol)
+            response = self.requestStockSymbols(alert.symbol)
             current_price = Stock(response[0]).getLatestPrice()
 
             minRange = min(alert.reference_point, current_price)
@@ -134,32 +134,9 @@ class Bort:
                 # f'Current price: {current_price}'
                 context.bot.send_message(job.context, text=message)
 
-    def enable_alerts(self, update: Update, context: CallbackContext) -> None:
-        update.message.reply_text('Notifications activated 🎉🥳')
-
-        chat_id: int = update.message.chat_id
-        context.job_queue.run_repeating(callback=self.callback_alert,
-                                        interval=60 * 10,
-                                        context=chat_id,
-                                        name=str(chat_id))
-
-    def disable_alerts(self, update: Update, context: CallbackContext) -> None:
-        update.message.reply_text('Any alert won\'t be notified anymore 🤫')
-
-        name = str(update.message.chat_id)
-        current_jobs = context.job_queue.get_jobs_by_name(name)
-        for current_job in current_jobs:
-            current_job.schedule_removal()
-
     def state_alerts(self, update: Update, context: CallbackContext) -> None:
         name = str(update.message.chat_id)
-        current_jobs = context.job_queue.get_jobs_by_name(name)
-
         message: str = ''
-        if current_jobs:
-            message += 'Currently active\n\n'
-        else:
-            message += 'Not active\n\n'
 
         alerts = self.alert_service.get_alerts(name)
         for alert in alerts:
@@ -188,7 +165,7 @@ class Bort:
             return ConversationHandler.END
 
         # Current price of the stock needed
-        response = self.requestSymbols(symbol)
+        response = self.requestStockSymbols(symbol)
         if not response:
             update.message.reply_text(
                 text='Symbol not found',
@@ -270,12 +247,12 @@ class Bort:
         return ConversationHandler.END
 
     def __init__(self, logger: Logger):
-        with open('token.txt', 'r') as file:
-            token = file.readline().replace('\n', '')
+        with open('info.json', 'r') as file:
+            data = json.load(file);
 
         # Class vars
         self.logger = logger
-        self.updater = Updater(token, use_context=True)
+        self.updater = Updater(data['token'], use_context=True)
 
         # Alert class to get access into the db
         self.alert_service = AlertService()
@@ -283,16 +260,19 @@ class Bort:
         # Setup dispatcher
         dispatcher = self.updater.dispatcher
 
+        # Run alert jobs
+        for chat_id in data['alerts_whitelist']:
+            self.updater.job_queue.run_repeating(callback=self.callback_alert,
+                                            interval=60 * 10,
+                                            context=chat_id,
+                                            name=str(chat_id))
+
         # Common handlers
         start_handler = CommandHandler('start', self.start)
         help_handler = CommandHandler('help', self.helper)
         command_handler = CommandHandler('tail', self.tail)
 
         # Alert handlers
-        enable_alerts_handler = CommandHandler(
-            'enable', self.enable_alerts)
-        remove_alerts_handler = CommandHandler(
-            'disable', self.disable_alerts)
         state_alerts_handler = CommandHandler(
             'list', self.state_alerts)
         asking_add_alert_handler = CommandHandler(
@@ -324,8 +304,6 @@ class Bort:
         dispatcher.add_handler(start_handler)
         dispatcher.add_handler(help_handler)
         dispatcher.add_handler(command_handler)
-        dispatcher.add_handler(enable_alerts_handler)
-        dispatcher.add_handler(remove_alerts_handler)
         dispatcher.add_handler(state_alerts_handler)
         dispatcher.add_handler(create_alert_handler)
         dispatcher.add_handler(delete_alert_handler)
