@@ -50,26 +50,26 @@ class Bort:
 
         return read['quoteResponse']['result']
 
-    def start(self, update: Update, context: CallbackContext) -> None:
+    def start(self, update: Update, _: CallbackContext) -> None:
         update.message.reply_text(
             text='<i>You can’t beat the market but you can beat your meat</i>\n\n'
             '- Warren Buffet probably',
             parse_mode='HTML')
 
-    def helper(self, update: Update, context: CallbackContext) -> None:
+    def helper(self, update: Update, _: CallbackContext) -> None:
         update.message.reply_text(
             text='<b>/start</b> - Greetings from Bort\n'
             '<b>/help</b> - You\'re currently here\n'
             '<b>... $<i>insert_symbol_here</i></b> ... - Ask for the price of a stock\n',
             parse_mode='HTML')
 
-    def tail(self, update: Update, context: CallbackContext) -> None:
+    def tail(self, update: Update, _: CallbackContext) -> None:
         with open('log.txt') as file:
             tail = deque(file, 10)
         for line in tail:
             update.message.reply_text(line)
 
-    def stock(self, update: Update, context: CallbackContext) -> None:
+    def stock(self, update: Update, _: CallbackContext) -> None:
         # Ignore message edits OR requests older than 5 mins
         if not update.message or self.timeDiff(update.message.date) > 5:
             return
@@ -134,7 +134,7 @@ class Bort:
                 # f'Current price: {current_price}'
                 context.bot.send_message(job.context, text=message)
 
-    def state_alerts(self, update: Update, context: CallbackContext) -> None:
+    def state_alerts(self, update: Update, _: CallbackContext) -> None:
         name = str(update.message.chat_id)
         message: str = ''
 
