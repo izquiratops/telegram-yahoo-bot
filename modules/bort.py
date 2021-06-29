@@ -1,6 +1,5 @@
-import re
-import json
-from datetime import datetime
+import re, json
+from datetime import datetime, time, timezone
 from urllib.request import urlopen
 from collections import deque
 
@@ -134,6 +133,12 @@ class Bort:
                 # f'Current price: {current_price}'
                 context.bot.send_message(job.context, text=message)
 
+    def open_market_reply(self, context: CallbackContext) -> None:
+        context.bot.send_message(context, text='El mercado se abre, prendas')
+
+    def close_market_reply(self, context: CallbackContext) -> None:
+        context.bot.send_message(context, text='El mercado se cierra, prendas')
+
     def state_alerts(self, update: Update, _: CallbackContext) -> None:
         name = str(update.message.chat_id)
         message: str = ''
@@ -262,6 +267,11 @@ class Bort:
 
         # Run alert jobs
         for chat_id in data['alerts_whitelist']:
+            # 13:30
+            open_time = time(hour=18, minute=10, second=00, tzinfo=timezone.utc)
+            close_time = time(hour=20, minute=00, second=00, tzinfo=timezone.utc)
+            self.updater.job_queue.run_daily(callback=self.open_market_reply, time=open_time)
+            self.updater.job_queue.run_daily(callback=self.close_market_reply, time=close_time)
             self.updater.job_queue.run_repeating(callback=self.callback_alert,
                                             interval=60 * 10,
                                             context=chat_id,
