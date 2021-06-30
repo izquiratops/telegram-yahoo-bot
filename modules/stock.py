@@ -33,7 +33,8 @@ class Stock:
 
     def __str__(self) -> str:
         rockets: str = '🚀' * floor(self.totalChangePercent / 5)
-        message: str = f"🔸 {self.displayName} ${self.symbol.upper()} {rockets}\n"
+        link = f"<a href='https://www.google.com/search?q={self.symbol}+stock'>{self.displayName}</a>"
+        message: str = f"👉 {self.symbol.upper()} · {link} {rockets}\n"
 
         if self.preMarketPrice:
             if (self.preMarketChangePercent > 0):

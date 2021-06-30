@@ -1,5 +1,6 @@
 import re, json
-from datetime import datetime, time, timezone
+from datetime import datetime, time
+from pytz import timezone
 from urllib.request import urlopen
 from collections import deque
 
@@ -16,8 +17,9 @@ from telegram.ext import (
 from modules.stock import Stock
 from modules.alerts import AlertService, Alert
 
-from logging import Logger
+from logging import Logger, debug
 
+MADRID = timezone('Europe/Madrid')
 SETTING_VALUE = range(1)
 
 
@@ -110,6 +112,7 @@ class Bort:
             update.message.reply_text(
                 text=response_text,
                 parse_mode='HTML',
+                disable_web_page_preview=True,
                 reply_to_message_id=update.message.message_id)
 
     def callback_alert(self, context: CallbackContext) -> None:
@@ -130,14 +133,17 @@ class Bort:
 
                 # Response
                 message = f'{alert.symbol} has passed from {alert.target_point}!'
-                # f'Current price: {current_price}'
                 context.bot.send_message(job.context, text=message)
 
     def open_market_reply(self, context: CallbackContext) -> None:
-        context.bot.send_message(context, text='El mercado se abre, prendas')
+        job = context.job
+        message = '🔔 El mercado abre en 5 minutos 🔔'
+        context.bot.send_message(job.context, text=message)
 
     def close_market_reply(self, context: CallbackContext) -> None:
-        context.bot.send_message(context, text='El mercado se cierra, prendas')
+        job = context.job
+        message = '🔔 El mercado cierra en 5 minutos 🔔'
+        context.bot.send_message(job.context, text=message)
 
     def state_alerts(self, update: Update, _: CallbackContext) -> None:
         name = str(update.message.chat_id)
@@ -267,15 +273,25 @@ class Bort:
 
         # Run alert jobs
         for chat_id in data['alerts_whitelist']:
-            # 13:30
-            open_time = time(hour=18, minute=10, second=00, tzinfo=timezone.utc)
-            close_time = time(hour=20, minute=00, second=00, tzinfo=timezone.utc)
-            self.updater.job_queue.run_daily(callback=self.open_market_reply, time=open_time)
-            self.updater.job_queue.run_daily(callback=self.close_market_reply, time=close_time)
+            # Open 13:30 UTC (15:30 GMT+2)
+            open_time = time(hour=15, minute=25, second=00, tzinfo=MADRID)
+            self.updater.job_queue.run_daily(callback=self.open_market_reply,
+                                            time=open_time,
+                                            context=chat_id,
+                                            name=f'open-{chat_id}')
+
+            # Close 20:00 UTC (22:00 GMT+2)
+            close_time = time(hour=21, minute=55, second=00, tzinfo=MADRID)
+            self.updater.job_queue.run_daily(callback=self.close_market_reply,
+                                            time=close_time,
+                                            context=chat_id,
+                                            name=f'close-{chat_id}')
+
+            # Alerts
             self.updater.job_queue.run_repeating(callback=self.callback_alert,
                                             interval=60 * 10,
                                             context=chat_id,
-                                            name=str(chat_id))
+                                            name=f'alerts-{chat_id}')
 
         # Common handlers
         start_handler = CommandHandler('start', self.start)
