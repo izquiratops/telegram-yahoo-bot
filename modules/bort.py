@@ -136,14 +136,16 @@ class Bort:
                 context.bot.send_message(job.context, text=message)
 
     def open_market_reply(self, context: CallbackContext) -> None:
-        job = context.job
-        message = '🔔 El mercado abre en 5 minutos 🔔'
-        context.bot.send_message(job.context, text=message)
+        if (datetime.now().isoweekday() in range(1,6)):
+            job = context.job
+            message = 'El mercado abre en 5 minutos'
+            context.bot.send_message(job.context, text=message)
 
     def close_market_reply(self, context: CallbackContext) -> None:
-        job = context.job
-        message = '🔔 El mercado cierra en 5 minutos 🔔'
-        context.bot.send_message(job.context, text=message)
+        if (datetime.now().isoweekday() in range(1,6)):
+            job = context.job
+            message = 'El mercado cierra en 5 minutos'
+            context.bot.send_message(job.context, text=message)
 
     def state_alerts(self, update: Update, _: CallbackContext) -> None:
         name = str(update.message.chat_id)
