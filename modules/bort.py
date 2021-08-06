@@ -1,6 +1,6 @@
 import re
 import json
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from pytz import timezone
 from urllib.request import urlopen
 from collections import deque
@@ -22,6 +22,24 @@ from logging import Logger
 
 MADRID = timezone('Europe/Madrid')
 SETTING_VALUE = range(1)
+
+# Early Trading Session: 7:00 a.m. to 9:30 a.m. ET
+# Open 11:00 UTC (13:00 GMT+2)
+EARLY_OPEN_MARKET = time(hour=13, minute=00, second=00, tzinfo=MADRID)
+# Close 13:30 UTC (15:30 GMT+2)
+EARLY_CLOSE_MARKET = time(hour=15, minute=30, second=00, tzinfo=MADRID)
+
+# Core Trading Session: 9:30 a.m. to 4:00 p.m. ET
+# Open 13:30 UTC (15:30 GMT+2)
+CORE_OPEN_MARKET = time(hour=15, minute=30, second=00, tzinfo=MADRID)
+# Close 20:00 UTC (22:00 GMT+2)
+CORE_CLOSE_MARKET = time(hour=22, minute=00, second=00, tzinfo=MADRID)
+
+# Late Trading Session: 4:00 p.m. to 8:00 p.m. ET
+# Open 20:00 UTC (22:00 GMT+2)
+LATE_OPEN_MARKET = time(hour=22, minute=00, second=00, tzinfo=MADRID)
+# Close 00:00 UTC (02:00 GMT+2)
+LATE_CLOSE_MARKET = time(hour=2, minute=00, second=00, tzinfo=MADRID)
 
 
 class Bort:
@@ -80,7 +98,7 @@ class Bort:
         unique_symbols = list(dict.fromkeys(symbols))
         # Split into list of stocks and cryptos (get rid of $|& in the process)
         unique_stocks = [x[1:] for x in unique_symbols if x[0] == '$']
-        unique_cryptos = [x[1:] for x in unique_symbols if x[0] == '&']
+        # unique_cryptos = [x[1:] for x in unique_symbols if x[0] == '&']
 
         # Yahoo Finance Request
         response = self.requestStockSymbols(unique_stocks)
@@ -114,24 +132,28 @@ class Bort:
                 reply_to_message_id=update.message.message_id)
 
     def callback_alert(self, context: CallbackContext) -> None:
-        job = context.job
-        chat_id: int = job.name
-        alerts = self.alert_service.get_alerts(chat_id)
+        now = datetime.now()
 
-        for alert in alerts:
-            # Check every alarm for this chat
-            response = self.requestStockSymbols(alert.symbol)
-            current_price = Stock(response[0]).getLatestPrice()
+        # Check weekday and market schedule
+        if (now.isoweekday() in range(1, 6)) and EARLY_OPEN_MARKET < now.time() < LATE_CLOSE_MARKET:
+            job = context.job
+            chat_id: int = job.name
+            alerts = self.alert_service.get_alerts(chat_id)
 
-            minRange = min(alert.reference_point, current_price)
-            maxRange = max(alert.reference_point, current_price)
-            if minRange < alert.target_point < maxRange:
-                # Once the alarm is triggered it's removed from db too
-                self.alert_service.remove_alert(chat_id, alert)
+            for alert in alerts:
+                # Check every alarm for this chat
+                response = self.requestStockSymbols(alert.symbol)
+                current_price = Stock(response[0]).getLatestPrice()
 
-                # Response
-                message = f'{alert.symbol} has passed from {alert.target_point}!'
-                context.bot.send_message(job.context, text=message)
+                minRange = min(alert.reference_point, current_price)
+                maxRange = max(alert.reference_point, current_price)
+                if minRange < alert.target_point < maxRange:
+                    # Once the alarm is triggered it's removed from db too
+                    self.alert_service.remove_alert(chat_id, alert)
+
+                    # Response
+                    message = f'{alert.symbol} has passed from {alert.target_point}!'
+                    context.bot.send_message(job.context, text=message)
 
     def open_market_reply(self, context: CallbackContext) -> None:
         if (datetime.now().isoweekday() in range(1, 6)):
@@ -274,21 +296,18 @@ class Bort:
 
         # ✨ Alert jobs ✨
         for chat_id in data['alerts_whitelist']:
-            # Open 13:30 UTC (15:30 GMT+2)
-            open_time = time(hour=15, minute=25, second=00, tzinfo=MADRID)
             self.updater.job_queue.run_daily(callback=self.open_market_reply,
-                                             time=open_time,
+                                             time=CORE_OPEN_MARKET +
+                                             timedelta(minutes=-5),
                                              context=chat_id,
                                              name=f'open-{chat_id}')
 
-            # Close 20:00 UTC (22:00 GMT+2)
-            close_time = time(hour=21, minute=55, second=00, tzinfo=MADRID)
             self.updater.job_queue.run_daily(callback=self.close_market_reply,
-                                             time=close_time,
+                                             time=CORE_CLOSE_MARKET +
+                                             timedelta(minutes=-5),
                                              context=chat_id,
                                              name=f'close-{chat_id}')
 
-            # Alerts
             self.updater.job_queue.run_repeating(callback=self.callback_alert,
                                                  interval=60 * 1,
                                                  context=chat_id,
