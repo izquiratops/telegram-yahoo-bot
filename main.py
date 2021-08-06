@@ -11,11 +11,11 @@ def setupLoggerHandler() -> RotatingFileHandler:
 	logFile = 'log.txt'
 
 	logHandler = RotatingFileHandler(logFile,
-		mode='a',
-		maxBytes=5*1024*1024,
-		backupCount=2,
-		encoding=None,
-		delay=0)
+		mode		= 'a',
+		maxBytes	= 5*1024*1024,
+		backupCount	= 2,
+		encoding	= None,
+		delay		= 0)
 	logHandler.setFormatter(logFormatter)
 	logHandler.setLevel(logging.INFO)
 
