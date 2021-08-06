@@ -69,7 +69,7 @@ class Stock:
         self.symbol = obj['symbol']
 
         for prop in ['displayName', 'shortName', 'longName']:
-            if prop in obj:  
+            if prop in obj:
                 self.displayName = obj[prop]
                 break
 

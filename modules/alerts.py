@@ -55,7 +55,7 @@ class AlertService:
     def search_markup_response(self, chat_id: str, symbol: str, target_point: str) -> Alert:
         table = self.db.table(chat_id)
         result = table.get(
-            (Query().symbol == symbol) & 
+            (Query().symbol == symbol) &
             (Query().target_point == target_point))
         try:
             return Alert(result)

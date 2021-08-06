@@ -1,4 +1,5 @@
-import re, json
+import re
+import json
 from datetime import datetime, time
 from pytz import timezone
 from urllib.request import urlopen
@@ -136,13 +137,13 @@ class Bort:
                 context.bot.send_message(job.context, text=message)
 
     def open_market_reply(self, context: CallbackContext) -> None:
-        if (datetime.now().isoweekday() in range(1,6)):
+        if (datetime.now().isoweekday() in range(1, 6)):
             job = context.job
             message = 'El mercado abre en 5 minutos'
             context.bot.send_message(job.context, text=message)
 
     def close_market_reply(self, context: CallbackContext) -> None:
-        if (datetime.now().isoweekday() in range(1,6)):
+        if (datetime.now().isoweekday() in range(1, 6)):
             job = context.job
             message = 'El mercado cierra en 5 minutos'
             context.bot.send_message(job.context, text=message)
@@ -233,17 +234,17 @@ class Bort:
             symbol, target_point = update.message.text.split(' ')
         except:
             update.message.reply_text(
-            text='🥺',
-            reply_to_message_id=update.message.message_id,
-            reply_markup=ReplyKeyboardRemove())
+                text='🥺',
+                reply_to_message_id=update.message.message_id,
+                reply_markup=ReplyKeyboardRemove())
             return ConversationHandler.END
 
         try:
             # Search for the selected Alert
             result = self.alert_service.search_markup_response(
-                chat_id = name, 
-                symbol = symbol.lower(),
-                target_point = float(target_point))
+                chat_id=name,
+                symbol=symbol.lower(),
+                target_point=float(target_point))
             # Remove from db
             self.alert_service.remove_alert(name, result)
             # Reply
@@ -261,7 +262,7 @@ class Bort:
 
     def __init__(self, logger: Logger):
         with open('info.json', 'r') as file:
-            data = json.load(file);
+            data = json.load(file)
 
         # Class vars
         self.logger = logger
@@ -278,22 +279,22 @@ class Bort:
             # Open 13:30 UTC (15:30 GMT+2)
             open_time = time(hour=15, minute=25, second=00, tzinfo=MADRID)
             self.updater.job_queue.run_daily(callback=self.open_market_reply,
-                                            time=open_time,
-                                            context=chat_id,
-                                            name=f'open-{chat_id}')
+                                             time=open_time,
+                                             context=chat_id,
+                                             name=f'open-{chat_id}')
 
             # Close 20:00 UTC (22:00 GMT+2)
             close_time = time(hour=21, minute=55, second=00, tzinfo=MADRID)
             self.updater.job_queue.run_daily(callback=self.close_market_reply,
-                                            time=close_time,
-                                            context=chat_id,
-                                            name=f'close-{chat_id}')
+                                             time=close_time,
+                                             context=chat_id,
+                                             name=f'close-{chat_id}')
 
             # Alerts
             self.updater.job_queue.run_repeating(callback=self.callback_alert,
-                                            interval=60 * 10,
-                                            context=chat_id,
-                                            name=f'alerts-{chat_id}')
+                                                 interval=60 * 1,
+                                                 context=chat_id,
+                                                 name=f'alerts-{chat_id}')
 
         # Common handlers
         start_handler = CommandHandler('start', self.start)
