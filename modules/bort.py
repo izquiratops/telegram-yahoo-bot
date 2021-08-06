@@ -18,21 +18,13 @@ from telegram.ext import (
 from modules.stock import Stock
 from modules.alerts import AlertService, Alert
 
-from logging import Logger, debug
+from logging import Logger
 
 MADRID = timezone('Europe/Madrid')
 SETTING_VALUE = range(1)
 
 
 class Bort:
-    '''A module-level docstring
-
-    Notice the comment above the docstring specifying the encoding.
-    Docstrings do appear in the bytecode, so you can access this through
-    the ``__doc__`` attribute. This is also what you'll see if you call
-    help() on a module or any other Python object.
-    '''
-
     def timeDiff(self, input_time: datetime) -> int:
         date = input_time.replace(tzinfo=None)
         now = datetime.utcnow()
@@ -44,7 +36,10 @@ class Bort:
             # Lambda function to map the content from Alert object into a string
             yield [f'{x}' for x in lst[i:i + n]]
 
-    def requestStockSymbols(self, symbols: str) -> list:
+    def requestStockSymbols(self, symbols: list) -> list:
+        # Yahoo accept one request with multiple stocks
+        symbols = ','.join(symbols)
+
         BASEURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
         with urlopen(BASEURL + symbols, timeout=10) as response:
             read = response.read()
@@ -77,25 +72,27 @@ class Bort:
             return
 
         # Ignore message if has no symbols on it
-        symbols = re.findall('[$][^\\s]*', update.message.text)
+        symbols = re.findall('[$|&][^\\s]*', update.message.text)
         if len(symbols) == 0:
             return
 
-        # Get User for log porposes
-        user = update.message.from_user
         # List of unique symbols
         unique_symbols = list(dict.fromkeys(symbols))
-        # Get rid of $
-        unique_symbols = [x[1:] for x in unique_symbols]
-        unique_symbols = ','.join(unique_symbols)
+        # Split into list of stocks and cryptos (get rid of $|& in the process)
+        unique_stocks = [x[1:] for x in unique_symbols if x[0] == '$']
+        unique_cryptos = [x[1:] for x in unique_symbols if x[0] == '&']
 
         # Yahoo Finance Request
-        response = self.requestStockSymbols(unique_symbols)
+        response = self.requestStockSymbols(unique_stocks)
+
+        # Get User for log porposes
+        user = update.message.from_user
+
         if not response:
             self.logger.error(
                 f'{user.full_name} '
                 f'[{update.message.from_user.id}]: '
-                f'{unique_symbols}')
+                f'{unique_stocks}')
             return
 
         # Write Response
@@ -159,12 +156,18 @@ class Bort:
         update.message.reply_text(message)
 
     def asking_add_alert(self, update: Update, _: CallbackContext) -> int:
-        update.message.reply_text(
-            text='Tell me which symbol and price.\nLike this <b>AAPL 250.50</b>',
-            parse_mode='HTML',
-            reply_to_message_id=update.message.message_id)
-
-        return SETTING_VALUE
+        if self.alert_service.get_alerts() >= 20:
+            update.message.reply_text(
+                text='Limit of 20 alerts reached 😢',
+                parse_mode='HTML',
+                reply_to_message_id=update.message.message_id)
+            return ConversationHandler.END
+        else:
+            update.message.reply_text(
+                text='Tell me which symbol and price.\nLike this <b>AAPL 250.50</b>',
+                parse_mode='HTML',
+                reply_to_message_id=update.message.message_id)
+            return SETTING_VALUE
 
     def creating_alert(self, update: Update, _: CallbackContext) -> int:
         name = str(update.message.chat_id)
@@ -261,20 +264,15 @@ class Bort:
         return ConversationHandler.END
 
     def __init__(self, logger: Logger):
+        # 'data' holds the bot token and whitelisted groups for alert jobs
         with open('info.json', 'r') as file:
             data = json.load(file)
 
-        # Class vars
         self.logger = logger
         self.updater = Updater(data['token'], use_context=True)
-
-        # Alert class to get access into the db
         self.alert_service = AlertService()
 
-        # Setup dispatcher
-        dispatcher = self.updater.dispatcher
-
-        # Run alert jobs
+        # ✨ Alert jobs ✨
         for chat_id in data['alerts_whitelist']:
             # Open 13:30 UTC (15:30 GMT+2)
             open_time = time(hour=15, minute=25, second=00, tzinfo=MADRID)
@@ -296,12 +294,12 @@ class Bort:
                                                  context=chat_id,
                                                  name=f'alerts-{chat_id}')
 
-        # Common handlers
+        # ✨ Handlers ✨
+        # ❗ Common
         start_handler = CommandHandler('start', self.start)
         help_handler = CommandHandler('help', self.helper)
         command_handler = CommandHandler('tail', self.tail)
-
-        # Alert handlers
+        # ❗ Alerts
         state_alerts_handler = CommandHandler(
             'list', self.state_alerts)
         asking_add_alert_handler = CommandHandler(
@@ -312,24 +310,23 @@ class Bort:
             'delete', self.asking_delete_alert)
         setting_delete_alert_handler = MessageHandler(
             Filters.text, self.deleting_alert)
-
-        # Create Alert conversation
+        # ❗ Create alert conversation
         create_alert_handler = ConversationHandler(
             entry_points=[asking_add_alert_handler],
             states={SETTING_VALUE: [setting_add_alert_handler]},
             fallbacks=[],
             conversation_timeout=60)
-
-        # Delete Alert conversation
+        # ❗ Delete alert conversation
         delete_alert_handler = ConversationHandler(
             entry_points=[asking_delete_alert_handler],
             states={SETTING_VALUE: [setting_delete_alert_handler]},
             fallbacks=[],
             conversation_timeout=60)
-
-        # Handler for getting stocks on messages
+        # ❗ Handler for getting symbols
         message_handler = MessageHandler(Filters.text, self.stock)
 
+        # ✨ Dispatcher setup ✨
+        dispatcher = self.updater.dispatcher
         dispatcher.add_handler(start_handler)
         dispatcher.add_handler(help_handler)
         dispatcher.add_handler(command_handler)

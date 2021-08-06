@@ -39,6 +39,10 @@ class AlertService:
         table = self.db.table(chat_id)
         table.insert(asdict(alert))
 
+    def getLength(self, chat_id: str) -> int:
+        table = self.db.table(chat_id)
+        return len(table)
+
     def get_alerts(self, chat_id: str) -> list:
         table = self.db.table(chat_id)
         alerts = [Alert(alert) for alert in table.all()]
