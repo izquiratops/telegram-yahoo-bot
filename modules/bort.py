@@ -3,7 +3,6 @@ import json
 from datetime import datetime, time, timedelta
 from pytz import timezone
 from urllib.request import urlopen
-from collections import deque
 
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
@@ -77,12 +76,6 @@ class Bort:
             '<b>/help</b> - You\'re currently here\n'
             '<b>... $<i>insert_symbol_here</i></b> ... - Ask for the price of a stock\n',
             parse_mode='HTML')
-
-    def tail(self, update: Update, _: CallbackContext) -> None:
-        with open('log.txt') as file:
-            tail = deque(file, 10)
-        for line in tail:
-            update.message.reply_text(line)
 
     def stock(self, update: Update, _: CallbackContext) -> None:
         # Ignore message edits OR requests older than 5 mins
@@ -321,7 +314,6 @@ class Bort:
         # ❗ Common
         start_handler = CommandHandler('start', self.start)
         help_handler = CommandHandler('help', self.helper)
-        command_handler = CommandHandler('tail', self.tail)
         # ❗ Alerts
         state_alerts_handler = CommandHandler(
             'list', self.state_alerts)
@@ -352,7 +344,6 @@ class Bort:
         dispatcher = self.updater.dispatcher
         dispatcher.add_handler(start_handler)
         dispatcher.add_handler(help_handler)
-        dispatcher.add_handler(command_handler)
         dispatcher.add_handler(state_alerts_handler)
         dispatcher.add_handler(create_alert_handler)
         dispatcher.add_handler(delete_alert_handler)
