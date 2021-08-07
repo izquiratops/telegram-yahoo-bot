@@ -309,7 +309,7 @@ class Bort:
                 name=f'close-{chat_id}')
             self.updater.job_queue.run_repeating(
                 callback=self.callback_alert,
-                interval=60 * 1,  # seconds * minutes
+                interval=60 * 5,  # seconds * minutes
                 context=chat_id,
                 name=f'alerts-{chat_id}')
 
