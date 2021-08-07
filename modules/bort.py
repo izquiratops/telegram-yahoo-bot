@@ -1,7 +1,8 @@
 import re
 import json
-from datetime import datetime, time, timedelta
+import random
 from pytz import timezone
+from datetime import datetime, time, timedelta
 from urllib.request import urlopen
 
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
@@ -40,6 +41,9 @@ LATE_OPEN_MARKET = time(hour=20, minute=00, second=00, tzinfo=MADRID)
 # Close 00:00 UTC (02:00 GMT+2)
 LATE_CLOSE_MARKET = time(hour=00, minute=00, second=00, tzinfo=MADRID)
 
+QUTOES = ['<i>You can’t beat the market but you can beat your meat</i>\n\n- Warren Buffet probably',
+          '<i>¡Viva el vino de Ribeiro!</i>\n\n- Mariano Rajoy']
+
 
 class Bort:
     def timeDiff(self, input_time: datetime) -> int:
@@ -47,7 +51,7 @@ class Bort:
         now = datetime.utcnow()
         return (now - date).total_seconds() / 60
 
-    def chunks(self, lst, n):
+    def chunks(self, lst: list, n: int):
         # From lst to chunks of length n
         for i in range(0, len(lst), n):
             # Lambda function to map the content from Alert object into a string
@@ -66,8 +70,7 @@ class Bort:
 
     def start(self, update: Update, _: CallbackContext) -> None:
         update.message.reply_text(
-            text='<i>You can’t beat the market but you can beat your meat</i>\n\n'
-            '- Warren Buffet probably',
+            text=random.choice(QUTOES),
             parse_mode='HTML')
 
     def helper(self, update: Update, _: CallbackContext) -> None:
@@ -128,7 +131,7 @@ class Bort:
         now = datetime.now()
 
         # Check weekday and market schedule
-        if (now.isoweekday() in range(1, 6)) and EARLY_OPEN_MARKET < now.time() < LATE_CLOSE_MARKET:
+        if now.isoweekday() in range(1, 6) and EARLY_OPEN_MARKET < now.time() < LATE_CLOSE_MARKET:
             job = context.job
             chat_id: int = job.name
             alerts = self.alert_service.get_alerts(chat_id)
@@ -149,15 +152,15 @@ class Bort:
                     context.bot.send_message(job.context, text=message)
 
     def open_market_reply(self, context: CallbackContext) -> None:
-        if (datetime.now().isoweekday() in range(1, 6)):
+        if datetime.now().isoweekday() in range(1, 6):
             job = context.job
-            message = 'El mercado abre en 5 minutos'
+            message = 'The market opens in 5 minutes'
             context.bot.send_message(job.context, text=message)
 
     def close_market_reply(self, context: CallbackContext) -> None:
-        if (datetime.now().isoweekday() in range(1, 6)):
+        if datetime.now().isoweekday() in range(1, 6):
             job = context.job
-            message = 'El mercado cierra en 5 minutos'
+            message = 'The market closes in 5 minutes'
             context.bot.send_message(job.context, text=message)
 
     def state_alerts(self, update: Update, _: CallbackContext) -> None:
