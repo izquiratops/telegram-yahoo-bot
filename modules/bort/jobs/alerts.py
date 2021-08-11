@@ -5,6 +5,7 @@ from logging import Logger
 from datetime import datetime
 
 from telegram.ext import CallbackContext
+from telegram.ext.updater import Updater
 
 from modules.dates import *
 from modules.httpRequests import *
@@ -44,7 +45,7 @@ class AlertJobs:
             for message in messages:
                 context.bot.send_message(job.context, text=message)
 
-    def __init__(self, logger: Logger, database: DatabaseService) -> None:
+    def __init__(self, logger: Logger, database: DatabaseService, updater: Updater) -> None:
         self.logger = logger
         self.database = database
 
@@ -53,8 +54,8 @@ class AlertJobs:
 
         # Checking alerts every 5 minutes
         for chat_id in data['alerts_whitelist']:
-            self.updater.job_queue.run_repeating(
-                callback=self.__callback_alert,
+            updater.job_queue.run_repeating(
+                callback=self.check,
                 interval=60 * 5,  # seconds * minutes
                 context=chat_id,
                 name=f'alerts-{chat_id}')

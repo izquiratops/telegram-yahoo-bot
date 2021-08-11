@@ -71,7 +71,7 @@ class MessageHandlers:
         self.database = database
 
         # Handlers
-        message = MessageHandler(Filters.text, self.__regex_message)
+        message = MessageHandler(Filters.text, self.regex_message)
 
         # Dispatcher
         dispatcher = updater.dispatcher

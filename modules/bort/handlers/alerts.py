@@ -150,13 +150,13 @@ class AlertHandlers:
 
         # Handlers
         # List current alerts
-        list_handler = CommandHandler('list', self.__list_alerts)
+        list_handler = CommandHandler('list', self.list_alerts)
 
         # Add alert states
         entry_add_conversation = CommandHandler(
-            'create', self.__asking_add_alert)
+            'create', self.asking_add_alert)
         setting_add_conversation = MessageHandler(
-            Filters.text, self.__create_alert)
+            Filters.text, self.create_alert)
 
         # Conversation handler
         create_alert_handler = ConversationHandler(
@@ -167,9 +167,9 @@ class AlertHandlers:
 
         # Delete alert states
         entry_delete_conversation = CommandHandler(
-            'delete', self.__asking_delete_alert)
+            'delete', self.asking_delete_alert)
         setting_delete_conversation = MessageHandler(
-            Filters.text, self.__delete_alert)
+            Filters.text, self.delete_alert)
 
         # Conversation handler
         delete_alert_handler = ConversationHandler(
