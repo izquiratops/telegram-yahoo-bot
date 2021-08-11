@@ -1,9 +1,11 @@
 import logging
 from logging.handlers import RotatingFileHandler
+
 from modules.bort import Bort
+from modules.database import DatabaseService
 
 
-def setupLoggerHandler() -> RotatingFileHandler:
+def __setupLoggerHandler() -> RotatingFileHandler:
     logFormatter = logging.Formatter(
         '%(asctime)s - %(levelname)s - %(message)s')
     logFile = 'log.txt'
@@ -21,21 +23,12 @@ def setupLoggerHandler() -> RotatingFileHandler:
 
 
 def main() -> None:
-    # Logging
     logger = logging.getLogger('root')
     logger.setLevel(logging.INFO)
-    logger.addHandler(setupLoggerHandler())
+    logger.addHandler(__setupLoggerHandler())
+    db_service = DatabaseService()
 
-    # Setup Telegram Bot logic
-    bort = Bort(logger)
-
-    # Start the Bot
-    bort.updater.start_polling()
-
-    # Block until you press Ctrl-C or the process receives SIGINT, SIGTERM or
-    # SIGABRT. This should be used most of the time, since start_polling() is
-    # non-blocking and will stop the bot gracefully.
-    bort.updater.idle()
+    Bort(logger, db_service)
 
 
 if __name__ == '__main__':

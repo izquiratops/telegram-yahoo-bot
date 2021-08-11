@@ -2,7 +2,7 @@ import json
 from urllib.request import urlopen
 
 
-def stock_symbols(self, symbols: list) -> list:
+def request_stocks(symbols: list) -> list:
     # Yahoo accept one request with multiple stocks
     symbols = ','.join(symbols)
     BASEURL = "https://query1.finance.yahoo.com/v7/finance/quote?symbols="
@@ -12,5 +12,5 @@ def stock_symbols(self, symbols: list) -> list:
     return read['quoteResponse']['result']
 
 
-def crypto_symbols(self, symbols: list) -> list:
+def request_cryptos(symbols: list) -> list:
     pass

@@ -1,113 +1,38 @@
 import json
-from typing import Tuple
 from logging import Logger
-from datetime import datetime, timedelta
 
-from telegram.ext import (
-    Updater,
-    Filters,
-    MessageHandler,
-    CommandHandler,
-    ConversationHandler
-)
+from telegram.ext import Updater
 
 from modules.dates import *
-from modules.alerts import AlertService
+from modules.database import DatabaseService
 
-# Bort Moduleç
-from .bot import start, helper
-from .messages import stock
-from .alerts import asking_add_alert, asking_delete_alert, create_alert, delete_alert, list_alerts
-from .jobs.alerts import callback_alert
-from .jobs.notifications import on_open_market, on_close_market
+from .handlers.bot import BotHandlers
+from .handlers.messages import MessageHandlers
+from .handlers.alerts import AlertHandlers
+from .jobs.alerts import AlertJobs
+from .jobs.notifications import NotificationJobs
 
 
 class Bort:
-    def __readCredentials(self, filename: str) -> Tuple[str, str]:
-        with open(filename, 'r') as file:
+    def __init__(self, logger: Logger, db_service: DatabaseService) -> None:
+        self.logger = logger
+        self.database_service = db_service
+
+        with open('info.json', 'r') as file:
             data = json.load(file)
 
-        return data['token'], data['alerts_whitelist']
+        updater = Updater(data['token'], use_context=True)
 
-    def __init__(self, logger: Logger) -> None:
-        # ✨ Setup the logger from main and a shared Alert db service ✨
-        self.logger = logger
-        self.alert_service = AlertService()
+        BotHandlers(logger, db_service, updater)
+        MessageHandlers(logger, db_service, updater)
+        AlertHandlers(logger, db_service, updater)
+        AlertJobs(logger, db_service, updater)
+        NotificationJobs(logger, db_service, updater)
 
-        # ✨ Setup telegram credentials ✨
-        token, whitelist = self.__readCredentials('info.json')
-        updater = Updater(token, use_context=True)
+        # Start the Bot
+        updater.start_polling()
 
-        # ✨ Jobs ✨
-        for chat_id in whitelist:
-            open_time_message: datetime = datetime.combine(
-                datetime.now(), CORE_OPEN_MARKET) - timedelta(minutes=5)
-            close_time_message: datetime = datetime.combine(
-                datetime.now(), CORE_CLOSE_MARKET) - timedelta(minutes=5)
-
-            # Message about open market
-            updater.job_queue.run_daily(
-                callback=on_open_market,
-                time=open_time_message.time(),
-                context=chat_id,
-                name=f'open-{chat_id}')
-
-            # Message about close market
-            updater.job_queue.run_daily(
-                callback=on_close_market,
-                time=close_time_message.time(),
-                context=chat_id,
-                name=f'close-{chat_id}')
-
-            # Repeating job for checking Alerts every 5 minutes
-            updater.job_queue.run_repeating(
-                callback=callback_alert,
-                interval=60 * 5,  # seconds * minutes
-                context=chat_id,
-                name=f'alerts-{chat_id}')
-
-        # ✨ Handlers ✨
-        # Common
-        start_handler = CommandHandler('start', start)
-        help_handler = CommandHandler('help', helper)
-
-        # Text analyze
-        message_handler = MessageHandler(Filters.text, stock)
-
-        # Alerts
-        # - List
-        state_alerts_handler = CommandHandler(
-            'list', list_alerts)
-
-        # - Create
-        entry_add_conversation = CommandHandler(
-            'create', asking_add_alert)
-        setting_add_conversation = MessageHandler(
-            Filters.text, create_alert)
-
-        create_alert_handler = ConversationHandler(
-            entry_points=[entry_add_conversation],
-            states={0: [setting_add_conversation]},
-            fallbacks=[],
-            conversation_timeout=60)
-
-        # - Delete
-        entry_delete_conversation = CommandHandler(
-            'delete', asking_delete_alert)
-        setting_delete_conversation = MessageHandler(
-            Filters.text, delete_alert)
-
-        delete_alert_handler = ConversationHandler(
-            entry_points=[entry_delete_conversation],
-            states={0: [setting_delete_conversation]},
-            fallbacks=[],
-            conversation_timeout=60)
-
-        # ✨ Dispatcher setup ✨
-        dispatcher = updater.dispatcher
-        dispatcher.add_handler(start_handler)
-        dispatcher.add_handler(help_handler)
-        dispatcher.add_handler(state_alerts_handler)
-        dispatcher.add_handler(create_alert_handler)
-        dispatcher.add_handler(delete_alert_handler)
-        dispatcher.add_handler(message_handler)
+        # Block until you press Ctrl-C or the process receives SIGINT, SIGTERM or
+        # SIGABRT. This should be used most of the time, since start_polling() is
+        # non-blocking and will stop the bot gracefully.
+        updater.idle()
