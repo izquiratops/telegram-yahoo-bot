@@ -15,7 +15,7 @@ class DatabaseService:
         table = self.db.table(chat_id)
         return len(table)
 
-    def get_alerts(self, chat_id: str) -> list:
+    def get_alerts(self, chat_id: str) -> list[str]:
         table = self.db.table(chat_id)
         alerts = [Alert(alert) for alert in table.all()]
         price_sorted_alerts = sorted(alerts, key=lambda x: x.target_point)

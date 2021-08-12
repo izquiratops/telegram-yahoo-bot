@@ -18,14 +18,14 @@ from modules.model.alert import Alert
 class AlertHandlers:
     SETTING_VALUE = range(1)
 
-    def __chunks(self, lst: list, n: int) -> Generator[list[str], None, None]:
+    def __chunks(self, lst: list, n: int = 2) -> Generator[list[str], None, None]:
         # From lst to chunks of length n
         for i in range(0, len(lst), n):
             # Lambda function to map the content from Alert object into a string
             yield [f'{x}' for x in lst[i:i + n]]
 
     def asking_add_alert(self, update: Update, _: CallbackContext) -> int:
-        if self.alert_service.get_alerts() >= 20:
+        if self.database.get_alerts() >= 20:
             update.message.reply_text(
                 text='Limit reached 😢',
                 parse_mode='HTML',
@@ -68,7 +68,7 @@ class AlertHandlers:
                 # Testing value
                 # 'reference_point': 1.00,
             }
-            self.alert_service.create_alert(name, Alert(data))
+            self.database.create_alert(name, Alert(data))
         except:
             update.message.reply_text(
                 text='<i>Oh oh made an oopsie</i>',
@@ -86,13 +86,13 @@ class AlertHandlers:
         name = str(update.message.chat_id)
 
         # Get current alerts for this chat
-        alerts = self.alert_service.get_alerts(name)
+        alerts = self.database.get_alerts(name)
 
         # Add 'Cancel' option
         alerts.append('Nevermind 🤔')
 
         # Setup keyboard markup
-        reply_keyboard = list(self.__chunks(alerts, 2))
+        reply_keyboard = list(self.__chunks(alerts))
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
         update.message.reply_text(
             text='Which one?',
@@ -115,12 +115,12 @@ class AlertHandlers:
 
         try:
             # Search for the selected Alert
-            result = self.alert_service.search_markup_response(
+            result = self.database.search_markup_response(
                 chat_id=name,
                 symbol=symbol.lower(),
                 target_point=float(target_point))
             # Remove from db
-            self.alert_service.remove_alert(name, result)
+            self.database.remove_alert(name, result)
             # Reply
             update.message.reply_text(
                 text='Done! 🎉',
@@ -136,9 +136,9 @@ class AlertHandlers:
 
     def list_alerts(self, update: Update, _: CallbackContext) -> None:
         name = str(update.message.chat_id)
-        message = ''
+        message = 'bruh'
 
-        alerts = self.alert_service.get_alerts(name)
+        alerts = self.database.get_alerts(name)
         for alert in alerts:
             message += f'{alert.symbol.upper()}: {alert.target_point}\n'
 
@@ -150,36 +150,32 @@ class AlertHandlers:
 
         # Handlers
         # List current alerts
-        list_handler = CommandHandler('list', self.list_alerts)
+        list = CommandHandler('list', self.list_alerts)
 
-        # Add alert states
+        # Conversation states
         entry_add_conversation = CommandHandler(
             'create', self.asking_add_alert)
-        setting_add_conversation = MessageHandler(
-            Filters.text, self.create_alert)
-
-        # Conversation handler
-        create_alert_handler = ConversationHandler(
-            entry_points=[entry_add_conversation],
-            states={0: [setting_add_conversation]},
-            fallbacks=[],
-            conversation_timeout=60)
-
-        # Delete alert states
         entry_delete_conversation = CommandHandler(
             'delete', self.asking_delete_alert)
+        setting_add_conversation = MessageHandler(
+            Filters.text, self.create_alert)
         setting_delete_conversation = MessageHandler(
             Filters.text, self.delete_alert)
 
-        # Conversation handler
-        delete_alert_handler = ConversationHandler(
+        # Conversation handlers
+        create = ConversationHandler(
+            entry_points=[entry_add_conversation],
+            states={self.SETTING_VALUE: [setting_add_conversation]},
+            fallbacks=[],
+            conversation_timeout=60)
+        delete = ConversationHandler(
             entry_points=[entry_delete_conversation],
-            states={0: [setting_delete_conversation]},
+            states={self.SETTING_VALUE: [setting_delete_conversation]},
             fallbacks=[],
             conversation_timeout=60)
 
         # Dispatcher
         dispatcher = updater.dispatcher
-        dispatcher.add_handler(list_handler)
-        dispatcher.add_handler(create_alert_handler)
-        dispatcher.add_handler(delete_alert_handler)
+        dispatcher.add_handler(list)
+        dispatcher.add_handler(create)
+        dispatcher.add_handler(delete)

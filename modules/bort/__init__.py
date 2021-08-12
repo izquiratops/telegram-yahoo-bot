@@ -26,6 +26,7 @@ class Bort:
         BotHandlers(logger, db_service, updater)
         MessageHandlers(logger, db_service, updater)
         AlertHandlers(logger, db_service, updater)
+
         AlertJobs(logger, db_service, updater)
         NotificationJobs(logger, db_service, updater)
 
