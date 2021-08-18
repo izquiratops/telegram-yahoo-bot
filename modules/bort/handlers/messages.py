@@ -6,22 +6,22 @@ from telegram import Update
 from telegram.ext import CallbackContext
 from telegram.ext.filters import Filters
 from telegram.ext.messagehandler import MessageHandler
-from telegram.ext.updater import Updater
 
 from modules.httpRequests import *
 from modules.database import DatabaseService
+from modules.updater import UpdaterService
 from modules.model.stock import Stock
 
 
 class MessageHandlers:
-    def __minutes_difference(self, input_time: datetime) -> int:
+    def _minutes_difference(self, input_time: datetime) -> int:
         date = input_time.replace(tzinfo=None)
         now = datetime.utcnow()
         return (now - date).total_seconds() / 60
 
     def regex_message(self, update: Update, _: CallbackContext) -> None:
         # Ignore message edits OR requests older than 5 mins
-        if not update.message or self.__minutes_difference(update.message.date) > 5:
+        if not update.message or self._minutes_difference(update.message.date) > 5:
             return
 
         # Ignore message if has no symbols on it
@@ -66,7 +66,7 @@ class MessageHandlers:
                 disable_web_page_preview=True,
                 reply_to_message_id=update.message.message_id)
 
-    def __init__(self, logger: Logger, database: DatabaseService, updater: Updater) -> None:
+    def __init__(self, logger: Logger, database: DatabaseService, updater_service: UpdaterService) -> None:
         self.logger = logger
         self.database = database
 
@@ -74,5 +74,5 @@ class MessageHandlers:
         message = MessageHandler(Filters.text, self.regex_message)
 
         # Dispatcher
-        dispatcher = updater.dispatcher
+        dispatcher = updater_service.updater.dispatcher
         dispatcher.add_handler(message)

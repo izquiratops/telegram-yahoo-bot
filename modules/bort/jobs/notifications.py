@@ -1,6 +1,7 @@
 import json
 from logging import Logger
 from datetime import datetime, timedelta
+from modules.updater import UpdaterService
 
 from telegram.ext import CallbackContext
 from telegram.ext.updater import Updater
@@ -22,7 +23,7 @@ class NotificationJobs:
             message = 'The market closes in 5 minutes'
             context.bot.send_message(job.context, text=message)
 
-    def __init__(self, logger: Logger, database: DatabaseService, updater: Updater) -> None:
+    def __init__(self, logger: Logger, database: DatabaseService, updater_service: UpdaterService) -> None:
         self.logger = logger
         self.database = database
 
@@ -36,14 +37,14 @@ class NotificationJobs:
                 datetime.now(), CORE_CLOSE_MARKET) - timedelta(minutes=5)
 
             # Message about open market
-            updater.job_queue.run_daily(
+            updater_service.updater.job_queue.run_daily(
                 callback=self.on_open_market,
                 time=open_time_message.time(),
                 context=chat_id,
                 name=f'open-{chat_id}')
 
             # Message about close market
-            updater.job_queue.run_daily(
+            updater_service.updater.job_queue.run_daily(
                 callback=self.on_close_market,
                 time=close_time_message.time(),
                 context=chat_id,

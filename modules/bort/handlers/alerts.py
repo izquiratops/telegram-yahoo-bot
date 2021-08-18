@@ -7,10 +7,10 @@ from telegram.ext import CallbackContext, ConversationHandler
 from telegram.ext.commandhandler import CommandHandler
 from telegram.ext.messagehandler import MessageHandler
 from telegram.ext.filters import Filters
-from telegram.ext.updater import Updater
 
 from modules.httpRequests import *
 from modules.database import DatabaseService
+from modules.updater import UpdaterService
 from modules.model.stock import Stock
 from modules.model.alert import Alert
 
@@ -18,7 +18,7 @@ from modules.model.alert import Alert
 class AlertHandlers:
     SETTING_VALUE = range(1)
 
-    def __chunks(self, lst: list, n: int = 2) -> Generator[list[str], None, None]:
+    def _chunks(self, lst: list, n: int = 2) -> Generator[list[str], None, None]:
         # From lst to chunks of length n
         for i in range(0, len(lst), n):
             # Lambda function to map the content from Alert object into a string
@@ -92,7 +92,7 @@ class AlertHandlers:
         alerts.append('Nevermind 🤔')
 
         # Setup keyboard markup
-        reply_keyboard = list(self.__chunks(alerts))
+        reply_keyboard = list(self._chunks(alerts))
         markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
         update.message.reply_text(
             text='Which one?',
@@ -144,7 +144,7 @@ class AlertHandlers:
 
         update.message.reply_text(message)
 
-    def __init__(self, logger: Logger, database: DatabaseService, updater: Updater) -> None:
+    def __init__(self, logger: Logger, database: DatabaseService, updater_service: UpdaterService) -> None:
         self.logger = logger
         self.database = database
 
@@ -175,7 +175,7 @@ class AlertHandlers:
             conversation_timeout=60)
 
         # Dispatcher
-        dispatcher = updater.dispatcher
+        dispatcher = updater_service.updater.dispatcher
         dispatcher.add_handler(list)
         dispatcher.add_handler(create)
         dispatcher.add_handler(delete)

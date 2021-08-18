@@ -17,9 +17,19 @@ class DatabaseService:
 
     def get_alerts(self, chat_id: str) -> list[str]:
         table = self.db.table(chat_id)
-        alerts = [Alert(alert) for alert in table.all()]
-        price_sorted_alerts = sorted(alerts, key=lambda x: x.target_point)
-        return sorted(price_sorted_alerts, key=lambda x: x.symbol)
+        try:
+            res = table.all()
+            alerts = [Alert(alert) for alert in res]
+        except:
+            raise
+
+        # Sorting
+        target_sorted_alerts = sorted(
+            alerts, key=lambda x: x.target_point)
+        symbol_sorted_alerts = sorted(
+            target_sorted_alerts, key=lambda x: x.symbol)
+
+        return symbol_sorted_alerts
 
     def remove_alert(self, chat_id: str, alert: Alert) -> None:
         table = self.db.table(chat_id)

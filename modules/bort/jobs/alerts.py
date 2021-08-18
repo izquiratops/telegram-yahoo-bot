@@ -5,17 +5,17 @@ from logging import Logger
 from datetime import datetime
 
 from telegram.ext import CallbackContext
-from telegram.ext.updater import Updater
 
 from modules.dates import *
 from modules.httpRequests import *
 from modules.model.stock import Stock
 from modules.model.alert import Alert
 from modules.database import DatabaseService
+from modules.updater import UpdaterService
 
 
 class AlertJobs:
-    def __get_current_state(self, alert: Alert) -> bool:
+    def _get_current_state(self, alert: Alert) -> bool:
         response = request_stocks(alert.symbol)
         current_price = Stock(response[0]).getLatestPrice()
         minRange = min(alert.reference_point, current_price)
@@ -23,9 +23,9 @@ class AlertJobs:
 
         return minRange < alert.target_point < maxRange
 
-    def __iterate_alerts(self, alerts: list[Alert], chat_id: str) -> Generator[list[str], None, None]:
+    def _iterate_alerts(self, alerts: list[Alert], chat_id: str) -> Generator[list[str], None, None]:
         for alert in alerts:
-            triggered = self.__get_current_state(alert)
+            triggered = self._get_current_state(alert)
 
             if triggered:
                 # Once the alarm is triggered it's removed from db too
@@ -40,12 +40,12 @@ class AlertJobs:
         # Check weekday and market schedule
         if now.isoweekday() in range(1, 6) and EARLY_OPEN_MARKET < now.time() < LATE_CLOSE_MARKET:
             alerts: list[Alert] = self.database.get_alerts(chat_id)
-            messages = list(self.__iterate_alerts(alerts, chat_id))
+            messages = list(self._iterate_alerts(alerts, chat_id))
 
             for message in messages:
                 context.bot.send_message(job.context, text=message)
 
-    def __init__(self, logger: Logger, database: DatabaseService, updater: Updater) -> None:
+    def __init__(self, logger: Logger, database: DatabaseService, updater_service: UpdaterService) -> None:
         self.logger = logger
         self.database = database
 
@@ -54,7 +54,7 @@ class AlertJobs:
 
         # Checking alerts every 5 minutes
         for chat_id in data['alerts_whitelist']:
-            updater.job_queue.run_repeating(
+            updater_service.updater.job_queue.run_repeating(
                 callback=self.check,
                 interval=60 * 5,  # seconds * minutes
                 context=chat_id,

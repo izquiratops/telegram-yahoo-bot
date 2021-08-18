@@ -3,9 +3,9 @@ from logging import Logger
 
 from telegram import Update
 from telegram.ext import (CallbackContext, CommandHandler)
-from telegram.ext.updater import Updater
 
 from modules.database import DatabaseService
+from modules.updater import UpdaterService
 
 
 class BotHandlers:
@@ -26,15 +26,16 @@ class BotHandlers:
             '<b>... $<i>insert_symbol_here</i></b> ... - Ask for the price of a stock\n',
             parse_mode='HTML')
 
-    def __init__(self, logger: Logger, database: DatabaseService, updater: Updater) -> None:
+    def __init__(self, logger: Logger, database: DatabaseService, updater_service: UpdaterService) -> None:
         self.logger = logger
         self.database = database
+        self.updater = updater_service.updater
 
         # Handlers
         start = CommandHandler('start', self.start)
         helper = CommandHandler('help', self.helper)
 
         # Dispatcher
-        dispatcher = updater.dispatcher
+        dispatcher = updater_service.updater.dispatcher
         dispatcher.add_handler(start)
         dispatcher.add_handler(helper)
