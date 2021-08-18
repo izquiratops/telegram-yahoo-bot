@@ -11,6 +11,6 @@ def request_stocks(symbols: list) -> list:
         read = json.loads(read)
     return read['quoteResponse']['result']
 
-
+# TODO Search a nice API for crypto data
 def request_cryptos(symbols: list) -> list:
     pass

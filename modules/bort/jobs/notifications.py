@@ -6,7 +6,7 @@ from modules.updater import UpdaterService
 from telegram.ext import CallbackContext
 from telegram.ext.updater import Updater
 
-from modules.dates import *
+from modules.model.dates import *
 from modules.database import DatabaseService
 
 
@@ -23,9 +23,10 @@ class NotificationJobs:
             message = 'The market closes in 5 minutes'
             context.bot.send_message(job.context, text=message)
 
-    def __init__(self, logger: Logger, database: DatabaseService, updater_service: UpdaterService) -> None:
+    def __init__(self, logger: Logger, db_service: DatabaseService, updater_service: UpdaterService) -> None:
         self.logger = logger
-        self.database = database
+        self.database = db_service
+        self.updater = updater_service.updater
 
         with open('info.json', 'r') as file:
             data = json.load(file)

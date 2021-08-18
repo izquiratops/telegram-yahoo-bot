@@ -1,4 +1,5 @@
 from dataclasses import asdict
+from typing import List
 from tinydb import TinyDB, Query
 
 from modules.model.alert import Alert
@@ -15,7 +16,7 @@ class DatabaseService:
         table = self.db.table(chat_id)
         return len(table)
 
-    def get_alerts(self, chat_id: str) -> list[str]:
+    def get_alerts(self, chat_id: str) -> List[str]:
         table = self.db.table(chat_id)
         try:
             res = table.all()

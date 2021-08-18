@@ -66,13 +66,14 @@ class MessageHandlers:
                 disable_web_page_preview=True,
                 reply_to_message_id=update.message.message_id)
 
-    def __init__(self, logger: Logger, database: DatabaseService, updater_service: UpdaterService) -> None:
+    def __init__(self, logger: Logger, db_service: DatabaseService, updater_service: UpdaterService) -> None:
         self.logger = logger
-        self.database = database
+        self.database = db_service
+        self.updater = updater_service.updater
 
         # Handlers
         message = MessageHandler(Filters.text, self.regex_message)
 
         # Dispatcher
-        dispatcher = updater_service.updater.dispatcher
+        dispatcher = self.updater.dispatcher
         dispatcher.add_handler(message)

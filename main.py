@@ -1,5 +1,4 @@
 import logging
-import json
 from logging.handlers import RotatingFileHandler
 
 from modules.bort import Bort
@@ -24,23 +23,14 @@ def _setupLoggerHandler() -> RotatingFileHandler:
     return logHandler
 
 
-def _readToken(path: str = 'info.json') -> str:
-    with open(path, 'r') as file:
-        data = json.load(file)
-
-    return data['token']
-
-
 def main() -> None:
     logger = logging.getLogger('root')
     logger.setLevel(logging.INFO)
     logger.addHandler(_setupLoggerHandler())
 
-    token = _readToken()
-    updater_service = UpdaterService(token)
+    # Set up bot
+    updater_service = UpdaterService()
     db_service = DatabaseService()
-
-    # Setup bot
     Bort(logger, db_service, updater_service)
 
     # Run it

@@ -1,5 +1,5 @@
-from typing import Generator
-
+from threading import current_thread
+from typing import Generator, List
 from logging import Logger
 
 from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
@@ -18,14 +18,17 @@ from modules.model.alert import Alert
 class AlertHandlers:
     SETTING_VALUE = range(1)
 
-    def _chunks(self, lst: list, n: int = 2) -> Generator[list[str], None, None]:
+    def _chunks(self, lst: list, n: int = 2) -> Generator[List[str], None, None]:
         # From lst to chunks of length n
         for i in range(0, len(lst), n):
             # Lambda function to map the content from Alert object into a string
             yield [f'{x}' for x in lst[i:i + n]]
 
     def asking_add_alert(self, update: Update, _: CallbackContext) -> int:
-        if self.database.get_alerts() >= 20:
+        name = str(update.message.chat_id)
+
+        current_alerts = self.database.get_alerts(name)
+        if len(current_alerts) >= 20:
             update.message.reply_text(
                 text='Limit reached 😢',
                 parse_mode='HTML',
@@ -144,13 +147,14 @@ class AlertHandlers:
 
         update.message.reply_text(message)
 
-    def __init__(self, logger: Logger, database: DatabaseService, updater_service: UpdaterService) -> None:
+    def __init__(self, logger: Logger, db_service: DatabaseService, updater_service: UpdaterService) -> None:
         self.logger = logger
-        self.database = database
+        self.database = db_service
+        self.updater = updater_service.updater
 
         # Handlers
         # List current alerts
-        list = CommandHandler('list', self.list_alerts)
+        list_command = CommandHandler('list', self.list_alerts)
 
         # Conversation states
         entry_add_conversation = CommandHandler(
@@ -163,19 +167,19 @@ class AlertHandlers:
             Filters.text, self.delete_alert)
 
         # Conversation handlers
-        create = ConversationHandler(
+        create_command = ConversationHandler(
             entry_points=[entry_add_conversation],
             states={self.SETTING_VALUE: [setting_add_conversation]},
             fallbacks=[],
             conversation_timeout=60)
-        delete = ConversationHandler(
+        delete_command = ConversationHandler(
             entry_points=[entry_delete_conversation],
             states={self.SETTING_VALUE: [setting_delete_conversation]},
             fallbacks=[],
             conversation_timeout=60)
 
         # Dispatcher
-        dispatcher = updater_service.updater.dispatcher
-        dispatcher.add_handler(list)
-        dispatcher.add_handler(create)
-        dispatcher.add_handler(delete)
+        dispatcher = self.updater.dispatcher
+        dispatcher.add_handler(list_command)
+        dispatcher.add_handler(create_command)
+        dispatcher.add_handler(delete_command)

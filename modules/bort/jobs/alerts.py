@@ -1,15 +1,14 @@
-from typing import Generator
-
 import json
+from typing import Generator, List
 from logging import Logger
 from datetime import datetime
 
 from telegram.ext import CallbackContext
 
-from modules.dates import *
 from modules.httpRequests import *
 from modules.model.stock import Stock
 from modules.model.alert import Alert
+from modules.model.dates import *
 from modules.database import DatabaseService
 from modules.updater import UpdaterService
 
@@ -23,7 +22,7 @@ class AlertJobs:
 
         return minRange < alert.target_point < maxRange
 
-    def _iterate_alerts(self, alerts: list[Alert], chat_id: str) -> Generator[list[str], None, None]:
+    def _iterate_alerts(self, alerts: List[Alert], chat_id: str) -> Generator[List[str], None, None]:
         for alert in alerts:
             triggered = self._get_current_state(alert)
 
@@ -45,9 +44,10 @@ class AlertJobs:
             for message in messages:
                 context.bot.send_message(job.context, text=message)
 
-    def __init__(self, logger: Logger, database: DatabaseService, updater_service: UpdaterService) -> None:
+    def __init__(self, logger: Logger, db_service: DatabaseService, updater_service: UpdaterService) -> None:
         self.logger = logger
-        self.database = database
+        self.database = db_service
+        self.updater = updater_service.updater
 
         with open('info.json', 'r') as file:
             data = json.load(file)
@@ -56,6 +56,6 @@ class AlertJobs:
         for chat_id in data['alerts_whitelist']:
             updater_service.updater.job_queue.run_repeating(
                 callback=self.check,
-                interval=60 * 5,  # seconds * minutes
+                interval=60 * 5, # seconds * minutes
                 context=chat_id,
                 name=f'alerts-{chat_id}')

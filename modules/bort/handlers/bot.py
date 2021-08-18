@@ -26,9 +26,9 @@ class BotHandlers:
             '<b>... $<i>insert_symbol_here</i></b> ... - Ask for the price of a stock\n',
             parse_mode='HTML')
 
-    def __init__(self, logger: Logger, database: DatabaseService, updater_service: UpdaterService) -> None:
+    def __init__(self, logger: Logger, db_service: DatabaseService, updater_service: UpdaterService) -> None:
         self.logger = logger
-        self.database = database
+        self.database = db_service
         self.updater = updater_service.updater
 
         # Handlers
@@ -36,6 +36,6 @@ class BotHandlers:
         helper = CommandHandler('help', self.helper)
 
         # Dispatcher
-        dispatcher = updater_service.updater.dispatcher
+        dispatcher = self.updater.dispatcher
         dispatcher.add_handler(start)
         dispatcher.add_handler(helper)
