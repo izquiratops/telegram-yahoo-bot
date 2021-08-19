@@ -139,7 +139,7 @@ class AlertHandlers:
 
     def list_alerts(self, update: Update, _: CallbackContext) -> None:
         name = str(update.message.chat_id)
-        message = 'bruh'
+        message = ''
 
         alerts = self.database.get_alerts(name)
         for alert in alerts:
