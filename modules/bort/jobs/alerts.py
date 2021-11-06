@@ -14,7 +14,7 @@ from modules.updater import UpdaterService
 
 
 class AlertJobs:
-    def _get_current_state(self, alert: Alert) -> bool:
+    def is_triggered(self, alert: Alert) -> bool:
         response = request_stocks(alert.symbol)
         current_price = Stock(response[0]).getLatestPrice()
         minRange = min(alert.reference_point, current_price)
@@ -22,9 +22,9 @@ class AlertJobs:
 
         return minRange < alert.target_point < maxRange
 
-    def _iterate_alerts(self, alerts: List[Alert], chat_id: str) -> Generator[List[str], None, None]:
+    def iterate_alerts(self, alerts: List[Alert], chat_id: str) -> Generator[List[str], None, None]:
         for alert in alerts:
-            triggered = self._get_current_state(alert)
+            triggered = self.is_triggered(alert)
 
             if triggered:
                 # Once the alarm is triggered it's removed from db too
@@ -39,7 +39,7 @@ class AlertJobs:
         # Check weekday and market schedule
         if now.isoweekday() in range(1, 6) and EARLY_OPEN_MARKET < now.time() < LATE_CLOSE_MARKET:
             alerts: list[Alert] = self.database.get_alerts(chat_id)
-            messages = list(self._iterate_alerts(alerts, chat_id))
+            messages = list(self.iterate_alerts(alerts, chat_id))
 
             for message in messages:
                 context.bot.send_message(job.context, text=message)
@@ -56,6 +56,6 @@ class AlertJobs:
         for chat_id in data['alerts_whitelist']:
             updater_service.updater.job_queue.run_repeating(
                 callback=self.check,
-                interval=60 * 5, # seconds * minutes
+                interval=60 * 5,  # seconds * minutes
                 context=chat_id,
                 name=f'alerts-{chat_id}')

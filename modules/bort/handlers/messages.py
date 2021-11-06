@@ -34,7 +34,6 @@ class MessageHandlers:
 
         # Split into list of stocks and cryptos (get rid of $|& in the process)
         unique_stocks = [x[1:] for x in unique_symbols if x[0] == '$']
-        unique_cryptos = [x[1:] for x in unique_symbols if x[0] == '&']
 
         # Yahoo Finance Request
         response = request_stocks(unique_stocks)

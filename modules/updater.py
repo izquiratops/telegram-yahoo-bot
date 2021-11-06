@@ -15,7 +15,7 @@ class UpdaterService():
 
     def __init__(self) -> None:
         print('Updater init')
-        with open('./info.json', 'r') as file:
+        with open('./credentials.json', 'r') as file:
             data = json.load(file)
 
         self.updater = Updater(data['token'], use_context=True)

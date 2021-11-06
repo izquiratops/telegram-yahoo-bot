@@ -10,8 +10,7 @@ from modules.updater import UpdaterService
 
 class BotHandlers:
     QUTOES = [
-        '<i>You can’t beat the market but you can beat your meat</i>\n\n- Warren Buffet probably',
-        '<i>¡Viva el vino de Ribeiro!</i>\n\n- Mariano Rajoy'
+        '<i>You can’t beat the market but you can beat your meat</i>\n\n- Warren Buffet probably'
     ]
 
     def start(self, update: Update, _: CallbackContext) -> None:

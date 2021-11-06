@@ -4,4 +4,4 @@
 __pycache__
 .vscode/*
 database.json
-info.json
+credentials.json

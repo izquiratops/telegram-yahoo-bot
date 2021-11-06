@@ -32,16 +32,23 @@ class Stock:
         return self.preMarketPrice or self.postMarketPrice or self.regularMarketPrice
 
     def __str__(self) -> str:
-        rockets: str = '🚀' * floor(self.totalChangePercent / 5)
         link = f"<a href='https://www.google.com/search?q={self.symbol}+stock'>{self.displayName}</a>"
-        message: str = f"👉 {self.symbol.upper()} · {link} {rockets}\n"
+        message: str = f"👉 {self.symbol.upper()} · {link}\n"
+
+        changeDegreeEmojis: str = ''
+        changeDegree: int = floor(self.totalChangePercent / 5)
+
+        if (changeDegree > 0):
+            changeDegreeEmojis = '🚀' * changeDegree
+        else:
+            changeDegreeEmojis = '💀' * abs(changeDegree)
 
         if self.preMarketPrice:
             if (self.preMarketChangePercent > 0):
                 emoji = '📈'
             else:
                 emoji = '📉'
-            message += f"<b>Pre Market</b> {emoji}\n" \
+            message += f"<b>Pre Market</b> {emoji} {changeDegreeEmojis}\n" \
                 f"{self.preMarketPrice}$ " \
                 f"({self.preMarketChange}$, {self.preMarketChangePercent}%)\n"
 
@@ -50,7 +57,7 @@ class Stock:
                 emoji = '📈'
             else:
                 emoji = '📉'
-            message += f"<b>Regular Market</b> {emoji}\n" \
+            message += f"<b>Regular Market</b> {emoji} {changeDegreeEmojis}\n" \
                 f"{self.regularMarketPrice}$ " \
                 f"({self.regularMarketChange}$, {self.regularMarketChangePercent}%)\n"
 
@@ -59,7 +66,7 @@ class Stock:
                 emoji = '📈'
             else:
                 emoji = '📉'
-            message += f"<b>After Hours</b> {emoji}\n" \
+            message += f"<b>After Hours</b> {emoji} {changeDegreeEmojis}\n" \
                 f"{self.postMarketPrice}$ " \
                 f"({self.postMarketChange}$, {self.postMarketChangePercent}%)\n"
 
