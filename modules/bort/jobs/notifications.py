@@ -28,7 +28,7 @@ class NotificationJobs:
         self.database = db_service
         self.updater = updater_service.updater
 
-        with open('info.json', 'r') as file:
+        with open('credentials.json', 'r') as file:
             data = json.load(file)
 
         for chat_id in data['alerts_whitelist']:

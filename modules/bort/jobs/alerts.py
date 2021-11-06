@@ -16,7 +16,7 @@ from modules.updater import UpdaterService
 class AlertJobs:
     def is_triggered(self, alert: Alert) -> bool:
         response = request_stocks(alert.symbol)
-        current_price = Stock(response[0]).getLatestPrice()
+        current_price = Stock(response[0]).get_latest_price()
         minRange = min(alert.reference_point, current_price)
         maxRange = max(alert.reference_point, current_price)
 
@@ -49,7 +49,7 @@ class AlertJobs:
         self.database = db_service
         self.updater = updater_service.updater
 
-        with open('info.json', 'r') as file:
+        with open('credentials.json', 'r') as file:
             data = json.load(file)
 
         # Checking alerts every 5 minutes

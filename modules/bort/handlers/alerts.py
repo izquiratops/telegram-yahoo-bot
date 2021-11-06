@@ -66,7 +66,7 @@ class AlertHandlers:
             data = {
                 # Saved always as lowercase
                 'symbol': symbol.lower(),
-                'reference_point': Stock(response[0]).getLatestPrice(),
+                'reference_point': Stock(response[0]).get_latest_price(),
                 'target_point': float(target)
                 # Testing value
                 # 'reference_point': 1.00,
