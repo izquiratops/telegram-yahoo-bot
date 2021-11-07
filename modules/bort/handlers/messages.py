@@ -25,30 +25,31 @@ class MessageHandlers:
             return
 
         # Ignore message if has no symbols on it
-        symbols = re.findall('[$|&][^\\s]*', update.message.text)
+        symbols = re.findall('[$][^\\s]*', update.message.text)
         if len(symbols) == 0:
             return
 
         # List of unique symbols
         unique_symbols = list(dict.fromkeys(symbols))
 
-        # Split into list of stocks and cryptos (get rid of $|& in the process)
-        unique_stocks = [x[1:] for x in unique_symbols if x[0] == '$']
+        # Get rid of '$' chars
+        unique_symbols = [x.replace('$', '') for x in unique_symbols]
 
         # Yahoo Finance Request
-        response = request_stocks(unique_stocks)
-
-        # Get User for log porposes
         user = update.message.from_user
-        if not response:
+        response = None
+        try:
+            response = request_stocks(unique_symbols)
+        except ConnectionError as error:
             self.logger.error(
                 f'{user.full_name} '
                 f'[{update.message.from_user.id}]: '
-                f'{unique_stocks}')
+                f'{unique_symbols}\n'
+                f'{error.args[0].code}: {error.args[0].msg}')
             return
 
         # Write Response
-        response_text: str = ''
+        response_text = ''
         for element in response:
             stock = Stock(element)
             response_text += f'{stock}\n'

@@ -14,7 +14,6 @@ class UpdaterService():
         self.updater.idle()
 
     def __init__(self) -> None:
-        print('Updater init')
         with open('./credentials.json', 'r') as file:
             data = json.load(file)
 
