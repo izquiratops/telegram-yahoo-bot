@@ -34,12 +34,12 @@ class Stock:
     def get_change_emojis(self, value: float) -> str:
         degree = value / 5
         isPossitive = degree > 0
-        absolute_value = ceil(abs(degree))
+        absolute_value = max(ceil(abs(degree)) - 1, 0)
 
         if (isPossitive > 0):
-            return '🚀' * absolute_value
+            return '📈 ' + '🚀' * absolute_value
         else:
-            return '💀' * absolute_value
+            return '📉 ' + '💀' * absolute_value
 
     def __str__(self) -> str:
         link = f"<a href='https://www.google.com/search?q={self.symbol}+stock'>{self.display_name}</a>"

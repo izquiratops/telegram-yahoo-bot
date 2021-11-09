@@ -6,11 +6,16 @@ from datetime import datetime
 from telegram.ext import CallbackContext
 
 from modules.httpRequests import *
+
 from modules.model.stock import Stock
 from modules.model.alert import Alert
 from modules.model.dates import *
+
 from modules.database import DatabaseService
 from modules.updater import UpdaterService
+
+EASTERN = timezone('US/Eastern')
+MADRID = timezone('Europe/Madrid')
 
 
 class AlertJobs:
@@ -37,7 +42,12 @@ class AlertJobs:
         now = datetime.now()
 
         # Check weekday and market schedule
-        if now.isoweekday() in range(1, 6) and EARLY_OPEN_MARKET < now.time() < LATE_CLOSE_MARKET:
+        check_from: datetime = datetime.combine(
+            datetime.now(EASTERN), EARLY_OPEN_MARKET).astimezone(MADRID)
+        check_until: datetime = datetime.combine(
+            datetime.now(EASTERN), AFTER_CLOSE_MARKET).astimezone(MADRID)
+
+        if now.isoweekday() in range(1, 6) and check_from < now.time() < check_until:
             alerts: list[Alert] = self.database.get_alerts(chat_id)
             messages = list(self.iterate_alerts(alerts, chat_id))
 

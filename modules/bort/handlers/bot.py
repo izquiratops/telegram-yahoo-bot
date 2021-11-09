@@ -4,11 +4,13 @@ from logging import Logger
 from telegram import Update
 from telegram.ext import (CallbackContext, CommandHandler)
 
+from modules.model.dates import *
 from modules.database import DatabaseService
 from modules.updater import UpdaterService
 
 
 class BotHandlers:
+
     QUTOES = [
         '<i>You can’t beat the market but you can beat your meat</i>\n\n- Warren Buffet probably'
     ]

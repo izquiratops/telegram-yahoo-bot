@@ -4,10 +4,12 @@ from datetime import datetime, timedelta
 from modules.updater import UpdaterService
 
 from telegram.ext import CallbackContext
-from telegram.ext.updater import Updater
 
 from modules.model.dates import *
 from modules.database import DatabaseService
+
+EASTERN = timezone('US/Eastern')
+MADRID = timezone('Europe/Madrid')
 
 
 class NotificationJobs:
@@ -33,9 +35,9 @@ class NotificationJobs:
 
         for chat_id in data['alerts_whitelist']:
             open_time_message: datetime = datetime.combine(
-                datetime.now(), CORE_OPEN_MARKET) - timedelta(minutes=5)
+                datetime.now(EASTERN), REGULAR_OPEN_MARKET).astimezone(MADRID) - timedelta(minutes=5)
             close_time_message: datetime = datetime.combine(
-                datetime.now(), CORE_CLOSE_MARKET) - timedelta(minutes=5)
+                datetime.now(EASTERN), REGULAR_CLOSE_MARKET).astimezone(MADRID) - timedelta(minutes=5)
 
             # Message about open market
             updater_service.updater.job_queue.run_daily(
