@@ -20,6 +20,8 @@ class MessageHandlers:
         return (now - date).total_seconds() / 60
 
     def regex_message(self, update: Update, _: CallbackContext) -> None:
+        print(f'->>> {update.message.chat_id}')
+
         # Ignore message edits OR requests older than 5 mins
         if not update.message or self._minutes_difference(update.message.date) > 5:
             return

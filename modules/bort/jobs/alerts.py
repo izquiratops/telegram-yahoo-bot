@@ -2,20 +2,19 @@ import json
 from typing import Generator, List
 from logging import Logger
 from datetime import datetime
+from pytz import timezone
 
 from telegram.ext import CallbackContext
 
 from modules.httpRequests import *
-
+from modules.model.dates import *
 from modules.model.stock import Stock
 from modules.model.alert import Alert
-from modules.model.dates import *
 
 from modules.database import DatabaseService
 from modules.updater import UpdaterService
 
 EASTERN = timezone('US/Eastern')
-MADRID = timezone('Europe/Madrid')
 
 
 class AlertJobs:
@@ -42,10 +41,8 @@ class AlertJobs:
         now = datetime.now()
 
         # Check weekday and market schedule
-        check_from: datetime = datetime.combine(
-            datetime.now(EASTERN), EARLY_OPEN_MARKET).astimezone(MADRID)
-        check_until: datetime = datetime.combine(
-            datetime.now(EASTERN), AFTER_CLOSE_MARKET).astimezone(MADRID)
+        check_from: datetime = datetime.combine(now, EARLY_OPEN_MARKET)
+        check_until: datetime = datetime.combine(now, AFTER_CLOSE_MARKET)
 
         if now.isoweekday() in range(1, 6) and check_from < now.time() < check_until:
             alerts: list[Alert] = self.database.get_alerts(chat_id)
