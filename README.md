@@ -7,7 +7,7 @@ The response:
 - Includes pre/after-market prices too
 - Links every company to a Google search
 
-![](https://github.com/izquiratops/telegram-stock-bot/blob/main/screen2.png)
+![](https://github.com/izquiratops/telegram-stock-bot/blob/main/docs/screen2.png)
 
 ### Alerts
 Checks if the price of X stock reached Y value every 5 minutes. If it's the case, then notify about it.
