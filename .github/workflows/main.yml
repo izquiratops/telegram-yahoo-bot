@@ -1,5 +1,4 @@
-name: build-and-deploy-on-docker-hub
-
+name: build-and-deploy
 on:
   push:
     branches: [ main ]
