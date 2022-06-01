@@ -28,5 +28,5 @@ jobs:
           context: .
           push: true
           file: dockerfile
-          tags: ${{ github.repository }}:${{ github.ref_name }}_0.0.2
+          tags: ${{ github.repository }}:${{ github.ref_name }}
           github-token: ${{ github.token }}
