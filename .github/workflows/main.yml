@@ -28,6 +28,6 @@ jobs:
         with:
           context: .
           push: true
-          file: Dockerfile
+          file: dockerfile
           tags: ${{ github.repository }}:${{ github.ref_name }}_0.0.2
           github-token: ${{ github.token }}
