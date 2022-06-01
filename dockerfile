@@ -15,4 +15,4 @@ RUN pip install python-telegram-bot
 COPY src/ .
 
 # command to run on container start
-CMD [ "python", "./src/main.py" ] 
+CMD [ "python3", "./src/main.py" ] 
