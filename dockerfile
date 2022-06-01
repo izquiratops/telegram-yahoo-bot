@@ -14,4 +14,4 @@ RUN pip install -r requirements.txt
 COPY src/ .
 
 # command to run on container start
-CMD [ "python" "./src/main.py" ] 
+CMD [ "python", "./src/main.py" ] 
