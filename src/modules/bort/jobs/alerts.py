@@ -1,4 +1,4 @@
-import json
+import json, os
 from typing import Generator, List
 from logging import Logger
 from datetime import datetime
@@ -56,7 +56,7 @@ class AlertJobs:
         self.database = db_service
         self.updater = updater_service.updater
 
-        with open('credentials/creds.json', 'r') as file:
+        with open(os.getcwd() + '/credentials/creds.json', 'r') as file:
             data = json.load(file)
 
         # Checking alerts every 5 minutes

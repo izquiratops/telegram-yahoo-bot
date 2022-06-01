@@ -1,4 +1,4 @@
-import json
+import json, os
 from logging import Logger
 from datetime import datetime, timedelta
 from pytz import timezone, UTC
@@ -31,7 +31,7 @@ class NotificationJobs:
         self.database = db_service
         self.updater = updater_service.updater
 
-        with open('credentials/creds.json', 'r') as file:
+        with open(os.getcwd() + '/credentials/creds.json', 'r') as file:
             data = json.load(file)
 
         for chat_id in data['alerts_whitelist']:

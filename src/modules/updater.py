@@ -1,4 +1,4 @@
-import json
+import json, os
 from telegram.ext.updater import Updater
 
 
@@ -14,7 +14,7 @@ class UpdaterService():
         self.updater.idle()
 
     def __init__(self) -> None:
-        with open('./credentials/creds.json', 'r') as file:
+        with open(os.getcwd() + '/credentials/creds.json', 'r') as file:
             data = json.load(file)
 
         self.updater = Updater(data['token'], use_context=True)
