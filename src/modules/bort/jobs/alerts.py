@@ -56,7 +56,7 @@ class AlertJobs:
         self.database = db_service
         self.updater = updater_service.updater
 
-        with open('credentials.json', 'r') as file:
+        with open('credentials/creds.json', 'r') as file:
             data = json.load(file)
 
         # Checking alerts every 5 minutes
