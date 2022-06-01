@@ -30,4 +30,4 @@ jobs:
           file: dockerfile
           tags: ${{ github.repository }}:${{ github.ref_name }}
           github-token: ${{ github.token }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
