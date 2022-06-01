@@ -21,8 +21,20 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Build and push Docker images
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        id: builder
+        uses: docker/setup-buildx-action@v1
+
+      - name: "Append ARM buildx builder"
+        uses: baschny/append-buildx-action@v1
+        with:
+          builder: ${{ steps.builder.outputs.name }}
+          endpoint: "tcp://the-fqdn-or-ip-of-arm64-host:2375"
+
+      - name: Build and push Docker images
         uses: docker/build-push-action@v3
         with:
           context: .
