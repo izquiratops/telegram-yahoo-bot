@@ -1,5 +1,5 @@
 # set base image (host OS)
-FROM python:3.9
+FROM python:3.9-alpine
 
 # set the working directory in the container
 WORKDIR /code
@@ -7,12 +7,11 @@ WORKDIR /code
 # copy the dependencies file to the working directory
 COPY requirements.txt .
 
+# copy the content of the local src directory to the working directory
+COPY src/ src/
+
 # install dependencies
 RUN pip install -r requirements.txt
-RUN pip install python-telegram-bot
-
-# copy the content of the local src directory to the working directory
-COPY src/ .
 
 # command to run on container start
-CMD [ "python3", "./src/main.py" ] 
+CMD [ "python3", "src/main.py" ] 
