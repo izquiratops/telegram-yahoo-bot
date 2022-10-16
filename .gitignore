@@ -6,3 +6,9 @@ __pycache__
 .vscode/*
 database.json
 credentials.json
+
+# IDE stuff
+.idea
+
+# Testing virtual environment
+venv/

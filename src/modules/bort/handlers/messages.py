@@ -7,10 +7,9 @@ from telegram.ext import CallbackContext
 from telegram.ext.filters import Filters
 from telegram.ext.messagehandler import MessageHandler
 
-from modules.httpRequests import *
-from modules.database import DatabaseService
-from modules.updater import UpdaterService
-from modules.model.stock import Stock
+from ...telegramBot import TelegramBot
+from ...model.stock import Stock
+from ...httpRequests import *
 
 
 class MessageHandlers:
@@ -20,8 +19,6 @@ class MessageHandlers:
         return (now - date).total_seconds() / 60
 
     def regex_message(self, update: Update, _: CallbackContext) -> None:
-        print(f'->>> {update.message.chat_id}')
-
         # Ignore message edits OR requests older than 5 mins
         if not update.message or self._minutes_difference(update.message.date) > 5:
             return
@@ -68,14 +65,12 @@ class MessageHandlers:
                 disable_web_page_preview=True,
                 reply_to_message_id=update.message.message_id)
 
-    def __init__(self, logger: Logger, db_service: DatabaseService, updater_service: UpdaterService) -> None:
+    def __init__(self, logger: Logger, telegram_bot: TelegramBot) -> None:
         self.logger = logger
-        self.database = db_service
-        self.updater = updater_service.updater
 
         # Handlers
         message = MessageHandler(Filters.text, self.regex_message)
 
         # Dispatcher
-        dispatcher = self.updater.dispatcher
+        dispatcher = telegram_bot.updater.dispatcher
         dispatcher.add_handler(message)

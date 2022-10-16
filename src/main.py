@@ -2,9 +2,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 from modules.bort import Bort
-from modules.database import DatabaseService
-from modules.updater import UpdaterService
-
+from modules.telegramBot import TelegramBot
 
 def _setupLoggerHandler() -> RotatingFileHandler:
     logFormatter = logging.Formatter(
@@ -29,12 +27,7 @@ def main() -> None:
     logger.addHandler(_setupLoggerHandler())
 
     # Set up bot
-    updater_service = UpdaterService()
-    db_service = DatabaseService()
-    Bort(logger, db_service, updater_service)
-
-    # Run it
-    updater_service.start()
+    Bort(logger, TelegramBot())
 
 
 if __name__ == '__main__':
