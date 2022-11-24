@@ -1,3 +1,4 @@
+import os
 from telegram.ext.updater import Updater
 
 
@@ -13,6 +14,5 @@ class TelegramBot:
         self.updater.idle()
 
     def __init__(self) -> None:
-        secret_path = f'/run/secrets/TELEGRAM_TOKEN'
-        token = open(secret_path).read().rstrip('\n')
+        token = os.environ.get('TELEGRAM_TOKEN')
         self.updater = Updater(token, use_context=True)

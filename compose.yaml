@@ -1,0 +1,8 @@
+version: "3"
+
+services:
+  bot:
+    image: izquiratops/telegram-python-bot:pumpkin-spice-flavor
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TELEGRAM_TOKEN=*YOUR_TOKEN_HERE*
