@@ -12,3 +12,6 @@ credentials.json
 
 # Testing virtual environment
 venv/
+
+# Bot token
+.telegram-bot-token
